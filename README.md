@@ -5,3 +5,5 @@ Design and control of a 3-DOF planar hopping robot, used for locomotion research
 Andrew SaLoutos
 
 Dan Lynch
+
+Zen Iwankiw
