@@ -1,8 +1,10 @@
 import trep
 from trep import tx,ty,tz,rx,ry,rz
+import trep.potentials
 import time
 import trep.visual as visual
 import math
+import numpy as np
 
 dt = 0.01
 tf = 10.0
@@ -31,22 +33,22 @@ def simulate_system(system):
 system = trep.System()
 system.import_frames([
     rx('theta1'),[
-        tz(-1, mass=1, name='pend1'),[
+        tz(-0.7, mass=1, name='pend1'),[
             rx('theta2'),[
-                tz(-1, mass=1, name='pend2'),[
+                tz(-0.8, mass=1, name='pend2'),[
                     rx('theta3'),[
-                        tz(-0.4, name='legConnection'),[
-                            tz(-1, mass=1, name='pend3')]]]]]],
-    ty(1.25), [
+                        tz(-0.5, name='legConnection'),[
+                            tz(-1.5, mass=1, name='pend3')]]]]]],
+    ty(1), [
         rx('theta4'),[
-            tz(-0.75, mass=1, name='pend4'),[
+            tz(-1, mass=1, name='pend4'),[
                 rx('theta5'),[
-                    tz(-1.5, mass=1, name='pend5')]]]],
-    ty(-1.25), [
+                    tz(-1, mass=1, name='pend5')]]]],
+    ty(-1), [
         rx('theta6'),[
-            tz(-0.75, mass=1, name='pend6'),[
+            tz(-1, mass=1, name='pend6'),[
                 rx('theta7'),[
-                    tz(-1.5, mass=1, name='pend7')
+                    tz(-1, mass=1, name='pend7')
                 ]
             ]
         ]
@@ -55,12 +57,20 @@ system.import_frames([
 
 # Establish gravity
 trep.potentials.Gravity(system, name="Gravity")
-trep.constraints.PointToPoint2D(system,'yz','pend5','legConnection')
-trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
+
+# Input Torque
+# trep.forces.ConfigForce(system, 'theta4', 'tau1')
+# tau1 = -2
+# system.u = tau1
+# system.f()
 
 # Assign values to the system initial configuration
 pie = math.pi
-system.q = [pie/4,-pie/2,pie/3,pie/4,-pie/2,-pie/4,pie/2]
+system.q = [pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2]
+
+# Add constraints
+trep.constraints.PointToPoint2D(system,'yz','pend5','legConnection')
+trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
 
 # Simulate
 start = time.clock()
