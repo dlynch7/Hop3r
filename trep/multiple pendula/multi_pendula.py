@@ -45,8 +45,8 @@ system.import_frames([
     ty(-1.25), [
         rx('theta6'),[
             tz(-0.75, mass=1, name='pend6'),[
-                rx('theta6'),[
-                    tz(-1.5, mass=1, name='pend6')
+                rx('theta7'),[
+                    tz(-1.5, mass=1, name='pend7')
                 ]
             ]
         ]
@@ -56,7 +56,7 @@ system.import_frames([
 # Establish gravity
 trep.potentials.Gravity(system, name="Gravity")
 trep.constraints.PointToPoint2D(system,'yz','pend5','legConnection')
-trep.constraints.PointToPoint2D(system,'yz','pend6','legConnection')
+trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
 
 # Assign values to the system initial configuration
 pie = math.pi
