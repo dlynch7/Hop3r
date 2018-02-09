@@ -2,6 +2,7 @@ import trep
 from trep import tx,ty,tz,rx,ry,rz
 import time
 import trep.visual as visual
+import math
 
 dt = 0.01
 tf = 10.0
@@ -14,7 +15,7 @@ def simulate_system(system):
     # Create and initialize the variational integrator
     mvi = trep.MidpointVI(system)
     mvi.initialize_from_configs(0.0, q0, dt, q0)
-    system.satisfy_constraints()
+    system.satisfy_constraints(tolerance=1e-1)
 
     # This is our simulation loop.  We save the results in two lists.
     q = [mvi.q2]
@@ -55,10 +56,10 @@ system.import_frames([
 # Establish gravity
 trep.potentials.Gravity(system, name="Gravity")
 trep.constraints.PointToPoint2D(system,'yz','pend5','legConnection')
-# trep.constraints.PointToPoint2D(system,'yz','pend6','legConnection')
+trep.constraints.PointToPoint2D(system,'yz','pend6','legConnection')
 
 # Assign values to the system initial configuration
-pie = 3.14
+pie = math.pi
 system.q = [pie/4,-pie/2,pie/3,pie/4,-pie/2,-pie/4,pie/2]
 
 # Simulate
