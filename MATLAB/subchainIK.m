@@ -163,6 +163,7 @@ if plotOption
 
 plotRobot(footPose, lengths, angles);
 
+
 end % end if plotOption
 
 end % end function

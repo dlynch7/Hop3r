@@ -81,7 +81,7 @@ yApsi = yKpsi + L6*sin(psi1 + psi2);
 figure % plot in a new window
 plot(0,0,'ro','MarkerSize',14); % mark body frame location
 hold on
-axis([-3 3 -4.5 1.5]); % set figure size
+% axis([-3 3 -4.5 1.5]); % set figure size
 
 % theta-chain:
 line([0,xHtheta],[0,yHtheta],'Color','k'); % draw link B1
@@ -117,5 +117,6 @@ mytitleText1 = ['x = ',num2str(xF),', y = ',num2str(yF),' , \angle = ',...
 mytitleText2 = ['\theta_1 = ',num2str(theta1*(180/pi)),'\circ, \phi_1 = ',...
     num2str(phi1*(180/pi)),'\circ, \psi_1 = ',num2str(psi1*(180/pi)),'\circ'];
 title({mytitleText1,mytitleText2},'Interpreter','tex' ); 
+axis square
 
 end % end function
