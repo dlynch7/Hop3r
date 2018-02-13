@@ -71,7 +71,10 @@ pie = math.pi
 #     'theta6' : 0,
 #     'theta7' : pie/2
 #     }
-system.q = (pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2)
+# system.q = (pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2)
+
+#these values are matched from the MATLAB init conditions
+system.q = (-2.4119+pie/2,1.6821,-0.8411,0+pie/2,-pie/2,0-pie/2,pie/2)
 
 system.satisfy_constraints()
 
@@ -90,9 +93,10 @@ theta1velocity = []
 theta4velocity = []
 
 # Open and read the csv file
-simlogreader=pd.read_csv('JointVelocities.csv',sep=',',header=None)
+simlogreader = np.genfromtxt('C:/Users/ziwan/School/Hop3r/trep/hopper_model/JointVelocities.csv',delimiter=',')
+
 for row in simlogreader:
-    print row[0],row[1],row[2]
+    # print row[0],row[1],row[2]
     try:
         q6,q1,q4 = float(row[0]),float(row[1]),float(row[2])
         theta6velocity = np.append(theta6velocity, q6)
@@ -107,9 +111,9 @@ q = [mvi.q2]
 t = [mvi.t2]
 while mvi.t1 < tf:
     qk2 = list(qk2_0)
-    qk2[system.get_config('theta1').k_index] += theta1velocity[(mvi.t1/dt)]
-    qk2[system.get_config('theta4').k_index] += theta4velocity[(mvi.t1/dt)]
-    qk2[system.get_config('theta6').k_index] += theta6velocity[(mvi.t1/dt)]
+    qk2[system.get_config('theta1').k_index] += theta1velocity[(int(mvi.t1/dt))]
+    qk2[system.get_config('theta4').k_index] += theta4velocity[(int(mvi.t1/dt))]
+    qk2[system.get_config('theta6').k_index] += theta6velocity[(int(mvi.t1/dt))]
     mvi.step(mvi.t2+dt, (), tuple(qk2))
     q.append(mvi.q2)
     t.append(mvi.t2)
