@@ -32,9 +32,8 @@ with open('simlog.csv','rb') as csvfile:
 		print row[0],row[1]
 		try:
 			t,q = float(row[0]),float(row[1])
-			#q = float(row[1])
-			tArr = np.append(qArr, row[0])
-			qArr = np.append(tArr, row[1])
+			tArr = np.append(tArr, t)
+			qArr = np.append(qArr, q)
 		except ValueError:
 			print("Error extracting float from string")
 
@@ -44,4 +43,4 @@ print len(tArr),len(qArr)
 print("Visualization ready")
 
 # Visualize the system in action
-#trep.visual.visualize_3d([ trep.visual.VisualItem3D(system, tArr, qArr) ])
+trep.visual.visualize_3d([ trep.visual.VisualItem3D(system, tArr, qArr) ])
