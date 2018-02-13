@@ -12,21 +12,23 @@ tf = 10.0
 # Set up the system frames
 system = trep.System()
 system.import_frames([
+    # Define the 3 Center Links
     rx('theta1', kinematic=True),[
         tz(-0.7, name='pend1'),[
-        # tz(-0.35, name='pend1'),[
             rx('theta2'),[
                 tz(-0.7, name='pend2'),[
                     rx('theta3'),[
                         tz(-0.5, name='legConnection'),[
                             tz(-0.5, mass=1, name='COMLeg'),[
                                 tz(-1, name='pend3')]]]]]]],
+    # Define the 2 Right Links
     ty(1), [
         rx('theta4', kinematic=True),[
             tz(-0.5, mass=1, name='COM4'),[
                 tz(-0.5),[
                     rx('theta5'),[
                         tz(-1, name='pend5')]]]]],
+    # Define the 2 Left Links
     ty(-1), [
         rx('theta6', kinematic=True),[
             tz(-0.5, mass=1, name='COM6'),[
@@ -48,7 +50,6 @@ trep.potentials.Gravity(system, name="Gravity")
 # trep.forces.ConfigForce(system, 'theta1', 'theta1-torque-middle')
 # trep.forces.ConfigForce(system, 'theta4', 'theta4-torque-right')
 # trep.forces.ConfigForce(system, 'theta6', 'theta6-torque-left')
-
 # def forcing(t):
 #     return (0.0*math.exp(-(t-5)**2), -7*math.exp(-(t-5)**2), 7*math.exp(-(t-5)**2))
 
@@ -58,6 +59,15 @@ trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
 
 # Assign values to the system initial configuration
 pie = math.pi
+# system.q = {
+#     'theta1' : pie/3,
+#     'theta2' : -2*pie/3,
+#     'theta3' : pie/3,
+#     'theta4' : 0,
+#     'theta5' : -pie/2,
+#     'theta6' : 0,
+#     'theta7' : pie/2
+#     }
 system.q = (pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2)
 
 system.satisfy_constraints()
