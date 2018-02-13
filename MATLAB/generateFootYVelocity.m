@@ -20,7 +20,7 @@ for i = 1:length(t)
     
     %compute all joint angles using subchainIK function
     angles = subchainIK(footpose, lengths, 0);
-    
+    pause(0.0001)
     %extract the values of the actuated joints 
     actuatedAngs(:,i) = angles(:,1);
 end
@@ -31,4 +31,15 @@ actuatedVels = diff(actuatedAngs) / dt;
 %export to CSV file - to be imported into python/trep
 csvwrite('JointVelocities.csv',actuatedVels);
 
-% plot(t(1:end-1),actuatedVels)
+%plot results
+figure
+plot(t,Yfoot)
+title('Y position of foot vs. time')
+figure
+plot(t,actuatedAngs)
+title('Actuated Joint Angles')
+legend('Left','Middle','Right')
+figure
+plot(t(1:end-1),actuatedVels)
+title('Actuated Joint Velocities')
+legend('Left','Middle','Right')
