@@ -23,7 +23,7 @@ qu = [angles(1,2); angles(1,3); angles(2,2); angles(2,3); angles(3,2); angles(3,
 Ja = actuatorJacobian(qa, qu, L, 1);
 
 Fx = 0;
-Fy = 50;
+Fy = 0;
 Mz = 0;
 
 % wrench = [Mz; Fx; Fy];
