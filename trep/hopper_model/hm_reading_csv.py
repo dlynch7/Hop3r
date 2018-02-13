@@ -6,6 +6,9 @@ import trep.visual as visual
 import math
 import numpy as np
 from math import sin
+import csv
+import pandas as pd
+
 
 dt = 0.01
 tf = 10.0
@@ -81,14 +84,32 @@ qk2_0 = system.qk
 mvi = trep.MidpointVI(system)
 mvi.initialize_from_configs(0.0, q0, dt, q0)
 
+# Initialize empty arrays for time and configuration
+theta6velocity = []
+theta1velocity = []
+theta4velocity = []
+
+# Open and read the csv file
+simlogreader=pd.read_csv('JointVelocities.csv',sep=',',header=None)
+for row in simlogreader:
+    print row[0],row[1],row[2]
+    try:
+        q6,q1,q4 = float(row[0]),float(row[1]),float(row[2])
+        theta6velocity = np.append(theta6velocity, q6)
+        theta1velocity = np.append(theta1velocity, q1)
+        theta4velocity = np.append(theta4velocity, q4)
+    except ValueError:
+        print("Error extracting float from string")
+
+
 # This is our simulation loop.  We save the results in two lists.
 q = [mvi.q2]
 t = [mvi.t2]
 while mvi.t1 < tf:
     qk2 = list(qk2_0)
-    qk2[system.get_config('theta1').k_index] += -0.25*sin(0.5*mvi.t1)
-    qk2[system.get_config('theta4').k_index] += 0.25*sin(0.5*mvi.t1)
-    qk2[system.get_config('theta6').k_index] += -0.25*sin(0.5*mvi.t1)
+    qk2[system.get_config('theta1').k_index] += theta1velocity[(mvi.t1/dt)]
+    qk2[system.get_config('theta4').k_index] += theta4velocity[(mvi.t1/dt)]
+    qk2[system.get_config('theta6').k_index] += theta6velocity[(mvi.t1/dt)]
     mvi.step(mvi.t2+dt, (), tuple(qk2))
     q.append(mvi.q2)
     t.append(mvi.t2)
