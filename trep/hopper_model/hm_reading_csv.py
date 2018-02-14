@@ -7,8 +7,6 @@ import math
 import numpy as np
 from math import sin
 import csv
-import pandas as pd
-
 
 dt = 0.01
 tf = 10.0
@@ -17,9 +15,9 @@ system = trep.System()
 system.import_frames([
     # Define the 3 Center Links
     rx('theta1', kinematic=True),[
-        tz(-0.7, name='pend1'),[
+        tz(-0.75, name='pend1'),[
             rx('theta2'),[
-                tz(-0.7, name='pend2'),[
+                tz(-0.75, name='pend2'),[
                     rx('theta3'),[
                         tz(-0.5, name='legConnection'),[
                             tz(-0.5, mass=1, name='COMLeg'),[
@@ -74,7 +72,7 @@ pie = math.pi
 # system.q = (pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2)
 
 #these values are matched from the MATLAB init conditions
-system.q = (-2.4119+pie/2,1.6821,-0.8411,0+pie/2,-pie/2,0-pie/2,pie/2)
+system.q = (-2.4119+pie/2, 1.6821, -0.8411, -1.7110+pie/2, -0.8957, -1.4306+pie/2, 0.8957)
 
 system.satisfy_constraints()
 
@@ -87,13 +85,13 @@ qk2_0 = system.qk
 mvi = trep.MidpointVI(system)
 mvi.initialize_from_configs(0.0, q0, dt, q0)
 
-# Initialize empty arrays for time and configuration
+# Initialize empty arrays for angular velocities of actuated joints
 theta6velocity = []
 theta1velocity = []
 theta4velocity = []
 
 # Open and read the csv file
-simlogreader = np.genfromtxt('C:/Users/ziwan/School/Hop3r/trep/hopper_model/JointVelocities.csv',delimiter=',')
+simlogreader = np.genfromtxt('C:/Python27/trepModel/Hop3r/trep/hopper_model/JointVelocities.csv',delimiter=',')
 
 for row in simlogreader:
     # print row[0],row[1],row[2]
