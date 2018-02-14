@@ -79,10 +79,9 @@ yApsi = yKpsi + L6*sin(psi1 + psi2);
 
 %% Plot
 % figure % plot in a new window
-hold off
 plot(0,0,'ro','MarkerSize',14); % mark body frame location
 hold on
-axis([-10 10 -35 5])
+axis([-
 % axis([-3 3 -4.5 1.5]); % set figure size
 
 % theta-chain:
