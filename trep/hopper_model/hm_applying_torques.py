@@ -77,7 +77,8 @@ def forcing1(t):
 
 # Assign values to the system initial configuration
 pie = math.pi
-system.q = (pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2)
+#system.q = (pie/3,-2*pie/3,pie/3,0,-pie/2,0,pie/2)
+system.q = (-2.4119+math.pi/2, 1.6821, -0.8411, -1.7110+math.pi/2, -0.8957, -1.4306+(math.pi/2), 0.8957)
 
 # Add constraints
 trep.constraints.PointToPoint2D(system,'yz','pend5','legConnection')
