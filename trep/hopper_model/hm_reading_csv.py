@@ -8,8 +8,8 @@ import numpy as np
 from math import sin
 import csv
 
-dt = 0.005
-tf = 5.0
+dt = 0.01
+tf = 10.0
 # Set up the system frames
 system = trep.System()
 system.import_frames([
@@ -59,22 +59,25 @@ trep.constraints.PointToPoint2D(system,'yz','pend5','legConnection')
 trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
 
 # Assign values to the system initial configuration
-# system.q = {
-#     'theta1' : math.pi/3,
-#     'theta2' : -2*math.pi/3,
-#     'theta3' : math.pi/3,
-#     'theta4' : 0,
-#     'theta5' : -math.pi/2,
-#     'theta6' : 0,
-#     'theta7' : math.pi/2
-#     }
+# These values are matched from the MATLAB init conditions
+system.q = {
+    'theta2' : 1.6821,
+    'theta3' : -0.8411,
+    'theta5' : -0.8957,
+    'theta7' : 0.8957
+    }
+
+system.qk = {
+    'theta1' : -2.4119+math.pi/2,
+    'theta4' : -1.7110+math.pi/2,
+    'theta6' : -1.4306+(math.pi/2)
+    }
 # system.q = (math.pi/3, -2*math.pi/3, math.pi/3, 0, -math.pi/2, 0, math.pi/2)
 
-#these values are matched from the MATLAB init conditions
-system.q = (-2.4119+math.pi/2, 1.6821, -0.8411, -1.7110+math.pi/2, -0.8957, -1.4306+(math.pi/2), 0.8957)
-#constant_q = tuple(['theta6'])
+# These values are matched from the MATLAB init conditions
+# system.q = (-2.4119+math.pi/2, 1.6821, -0.8411, -1.7110+math.pi/2, -0.8957, -1.4306+(math.pi/2), 0.8957)
+# constant_q = tuple(['theta6'])
 system.satisfy_constraints(tolerance=1e-1)
-
 
 # Simulate
 start = time.clock()
@@ -85,15 +88,13 @@ qk2_0 = system.qk
 mvi = trep.MidpointVI(system)
 mvi.initialize_from_configs(0.0, q0, dt, q0)
 
-
-
 # Initialize empty arrays for angular velocities of actuated joints
 theta6velocity = []
 theta1velocity = []
 theta4velocity = []
 
 # Open and read the csv file
-simlogreader = np.genfromtxt('C:/Python27/trepModel/Hop3r/trep/hopper_model/JointVelocities.csv',delimiter=',')
+simlogreader = np.genfromtxt('/Users/gregniederschulte/Documents/GitHub/Hop3r/trep/hopper_model/JointVelocities.csv',delimiter=',')
 
 for row in simlogreader:
     # print row[0],row[1],row[2]
