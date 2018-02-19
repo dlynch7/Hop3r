@@ -8,6 +8,8 @@ import numpy as np
 from math import sin
 import csv
 
+csvPath = '/Users/gregniederschulte/Documents/GitHub/Hop3r/trep/hopper_model/JointVelocities.csv'
+
 dt = 0.01
 tf = 10.0
 # Set up the system frames
@@ -60,23 +62,24 @@ trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
 
 # Assign values to the system initial configuration
 # These values are matched from the MATLAB init conditions
-system.q = {
-    'theta2' : 1.6821,
-    'theta3' : -0.8411,
-    'theta5' : -0.8957,
-    'theta7' : 0.8957
-    }
+# system.q = {
+#     'theta2' : 1.6821,
+#     'theta3' : -0.8411,
+#     'theta5' : -0.8957,
+#     'theta7' : 0.8957
+#     }
 
-system.qk = {
-    'theta1' : -2.4119+math.pi/2,
-    'theta4' : -1.7110+math.pi/2,
-    'theta6' : -1.4306+(math.pi/2)
-    }
-# system.q = (math.pi/3, -2*math.pi/3, math.pi/3, 0, -math.pi/2, 0, math.pi/2)
+# system.qk = {
+#     'theta1' : -2.4119+math.pi/2,
+#     'theta4' : -1.7110+math.pi/2,
+#     'theta6' : -1.4306+(math.pi/2)
+#     }
 
 # These values are matched from the MATLAB init conditions
 # system.q = (-2.4119+math.pi/2, 1.6821, -0.8411, -1.7110+math.pi/2, -0.8957, -1.4306+(math.pi/2), 0.8957)
-# constant_q = tuple(['theta6'])
+
+system.q = (1.6821, -0.8411, -0.8957, 0.8957)
+system.qk = (-2.4119+math.pi/2, -1.7110+math.pi/2, -1.4306+(math.pi/2))
 system.satisfy_constraints(tolerance=1e-1)
 
 # Simulate
@@ -94,7 +97,7 @@ theta1velocity = []
 theta4velocity = []
 
 # Open and read the csv file
-simlogreader = np.genfromtxt('/Users/gregniederschulte/Documents/GitHub/Hop3r/trep/hopper_model/JointVelocities.csv',delimiter=',')
+simlogreader = np.genfromtxt(csvPath,delimiter=',')
 
 for row in simlogreader:
     # print row[0],row[1],row[2]
