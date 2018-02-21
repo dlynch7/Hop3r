@@ -1,4 +1,4 @@
-function [angles] = subchainIK(footPose, lengths,plotOption)
+function [angles] = subchainIK(footPose, lengths, plotOption)
 %% Description:
 %   Computes inverse kinematics for each sub-chain (theta, phi, and psi
 %   chains)
@@ -33,8 +33,10 @@ L5 = lengths(5);
 L6 = lengths(6);
 L7 = lengths(7);
 L8 = lengths(8);
-B1 = lengths(9);
-B2 = lengths(10);
+B1x = lengths(9);
+B2x = lengths(10);
+B1y = lengths(11);
+B2y = lengths(12);
 
 %% Extract foot pose:
 xF = footPose(1);
@@ -51,11 +53,11 @@ yAu = yF - (L7+L8)*sin(angF);
 
 %% IK for theta-chain:
 % Calculate (x,y) location of "hip" joint:
-xHtheta = -B1;
-yHtheta = 0;
+xHtheta = -B1x;
+yHtheta = B1y;
 
 % Calculate hip angle:
-xAptheta = B1 + xA;
+xAptheta = B1x + xA;
 gammatheta = wrapToPi(abs(atan2(abs(yA),xAptheta)));
 alphatheta = wrapToPi(acos((xAptheta^2 + yA^2 + L1^2 - L2^2)/(2*L1*sqrt(xAptheta^2 + yA^2))));
 theta1 = wrapToPi(-gammatheta - alphatheta);
@@ -98,11 +100,11 @@ phi3 = wrapToPi(angF - phi1 - phi2);
 
 %% IK for psi-chain:
 % Calculate (x,y) location of "hip" joint:
-xHpsi = B2;
-yHpsi = 0;
+xHpsi = B2x;
+yHpsi = B2y;
 
 % Calculate hip angle:
-xAppsi = B2 - xA;
+xAppsi = B2x - xA;
 gammapsi = wrapToPi(abs(atan2(abs(yA),xAppsi)));
 alphapsi = wrapToPi(acos((xAppsi^2 + yA^2 + L5^2 - L6^2)/(2*L5*sqrt(xAppsi^2 + yA^2))));
 psi1 = wrapToPi(pi + gammapsi + alphapsi);

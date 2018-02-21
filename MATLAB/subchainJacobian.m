@@ -37,8 +37,10 @@ L5 = lengths(5);
 L6 = lengths(6);
 L7 = lengths(7);
 L8 = lengths(8);
-B1 = lengths(9);
-B2 = lengths(10);
+B1x = lengths(9);
+B2x = lengths(10);
+B1y = lengths(11);
+B2y = lengths(12);
 
 %% "unpack" individual angles from "qa" and "qu" input vectors:
 % Note: this step is just for cleaner-looking code.
