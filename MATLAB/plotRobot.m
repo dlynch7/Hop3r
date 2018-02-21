@@ -66,7 +66,7 @@ yKphi = yHphi + L3*sin(phi1);
 xAuphi = xKphi + L4*cos(phi1 + phi2);
 yAuphi = yKphi + L4*sin(phi1 + phi2);
 
-%% IK for psi-chain:
+%% FK for psi-chain:
 % Calculate (x,y) location of "hip" joint:
 xHpsi = B2x;
 yHpsi = B2y;
