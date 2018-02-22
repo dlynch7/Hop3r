@@ -7,8 +7,25 @@ function minimizationVec = dimensionOptimization()
 % = [Tmin, xmin, ymin, amin, bmin]';
 
 %Energy required to lift 5kg to h = 10cm
-E = 5 * 9.81 * 0.1;
+m = 5;
+E = m * 9.81 * 0.1;
 E = E/2; %symmetry - motor on one side responsible for 50% of total energy
+v_final = sqrt(2 * 9.81 * 0.1);
+
+%Power required - from 25% cycle time on ground, and half of that time
+%available for upwards acceleration
+tair = 2*v_final / 9.81;
+tground = tair / 3;
+t_accel = tground / 2;
+P = E / t_accel;
+
+%required average acceleration over t_accel time:
+accel = v_final / t_accel;
+
+%distance covered during this period of constant accelertion
+%this is equal to the theoretical maximum vertical travel we need for
+%jumping
+deltaX = 1/2 * accel * t_accel^2;
 
 d = 5; %the end of link b's initial distance below origin
 

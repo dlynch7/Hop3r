@@ -7,8 +7,25 @@ function minimizationVec = dimensionOptimization()
 % = [Tmin, xmin, ymin, amin, bmin]';
 
 %Energy required to lift 5kg to h = 10cm
-E = 5 * 9.81 * 0.1;
+m = 5;
+E = m * 9.81 * 0.1;
 E = E/2; %symmetry - motor on one side responsible for 50% of total energy
+v_final = sqrt(2 * 9.81 * 0.1);
+
+%Power required - from 25% cycle time on ground, and half of that time
+%available for upwards acceleration
+tair = 2*v_final / 9.81;
+tground = tair / 3;
+t_accel = tground / 2;
+P = E / t_accel;
+
+%required average acceleration over t_accel time:
+accel = v_final / t_accel
+
+%distance covered during this period of constant accelertion
+%this is equal to the theoretical maximum vertical travel we need for
+%jumping
+deltaX = 1/2 * accel * t_accel^2
 
 d = 5; %the end of link b's initial distance below origin
 
@@ -86,8 +103,6 @@ function [t1,t2] = IK(x,y,a,b,d)
 % All lengths in centimeters
 
 % Calculate hip angle:
-xAppsi = x;
-yAppsi = y - d;
 
 gamma = wrapToPi(abs(atan2(abs(y+d),x)));
 alpha = wrapToPi(acos((x^2 + (y+d)^2 + a^2 - b^2)/(2*a*sqrt(x^2 + (y+d)^2))));
@@ -99,12 +114,5 @@ yK = y - a*cos(t1);
 
 % Calculate knee angle:
 t2 = atan2(yK+d, xK);
-% betapsi = wrapToPi(acos((L5^2 + L6^2 - xAppsi^2 - yA^2)/(2*L5*L6)));
-% psi2 = wrapToPi(pi + betapsi);
-%
-% % Calculate (x,y,angle) of "lower ankle" joint, using FK:
-% xApsi = xKpsi + L6*cos(psi1 + psi2);
-% yApsi = yKpsi + L6*sin(psi1 + psi2);
-% psi3 = wrapToPi(angF - psi1 - psi2);
 
 
