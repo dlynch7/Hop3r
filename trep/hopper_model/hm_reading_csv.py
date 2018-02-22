@@ -80,7 +80,13 @@ trep.constraints.PointToPoint2D(system,'yz','pend7','legConnection')
 
 system.q = (1.6821, -0.8411, -0.8957, 0.8957)
 system.qk = (-2.4119+math.pi/2, -1.7110+math.pi/2, -1.4306+(math.pi/2))
-system.satisfy_constraints(tolerance=1e-1)
+
+# Starting the simulation from the configuration it jumps to
+#system.q = (2.24633566,-1.36090603,-1.41895841,1.41896977,-1.01981214,-0.01004199,0.01003075)
+
+
+
+system.satisfy_constraints(tolerance=1e-10, keep_kinematic=True)
 
 # Simulate
 start = time.clock()
@@ -113,11 +119,11 @@ for row in simlogreader:
 # This is our simulation loop.  We save the results in two lists.
 q = [mvi.q2]
 t = [mvi.t2]
+qk2 = list(qk2_0)
 while mvi.t1 < tf:
-    qk2 = list(qk2_0)
-    qk2[system.get_config('theta1').k_index] += theta1velocity[(int(mvi.t1/dt))]
-    qk2[system.get_config('theta4').k_index] += theta4velocity[(int(mvi.t1/dt))]
-    qk2[system.get_config('theta6').k_index] += theta6velocity[(int(mvi.t1/dt))]
+    qk2[system.get_config('theta1').k_index] += 0.01*theta1velocity[(int(mvi.t1/dt))]
+    qk2[system.get_config('theta4').k_index] += 0.01*theta4velocity[(int(mvi.t1/dt))]
+    qk2[system.get_config('theta6').k_index] += 0.01*theta6velocity[(int(mvi.t1/dt))]
     mvi.step(mvi.t2+dt, (), tuple(qk2))
     q.append(mvi.q2)
     t.append(mvi.t2)
