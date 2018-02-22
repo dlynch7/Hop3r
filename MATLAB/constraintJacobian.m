@@ -12,9 +12,9 @@ function Jc = constraintJacobian(qa,qu,lengths)
 %   lengths: the relevant dimensions of the robot, stored in a 10x1 column
 %       vector according to this order:
 %       lengths = [L1; L2; L3; L4; L5 L6; L7; L8; B1; B2], where
-%       B1, L1, L2, and L8 correspond to the theta-chain,
+%       B1x, B1y, L1, L2, and L8 correspond to the theta-chain,
 %       L3, L4, L7, and L8 correspond to the phi-chain, and
-%       B2, L5, L6, and L8 correspond to the psi-chain.
+%       B2x, B2y, L5, L6, and L8 correspond to the psi-chain.
 %
 % Outputs:
 %   Jc: the constraint Jacobian, a 6x6 matrix.
@@ -35,8 +35,10 @@ L5 = lengths(5);
 L6 = lengths(6);
 L7 = lengths(7);
 L8 = lengths(8);
-B1 = lengths(9);
-B2 = lengths(10);
+B1x = lengths(9);
+B2x = lengths(10);
+B1y = lengths(11);
+B2y = lengths(12);
 
 %% "unpack" individual angles from "qa" and "qu" input vectors:
 % Note: this step is just for cleaner-looking code.

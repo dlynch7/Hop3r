@@ -1,4 +1,4 @@
-function [angles] = subchainIK(footPose, lengths,plotOption)
+function [angles] = subchainIK(footPose, lengths, plotOption)
 %% Description:
 %   Computes inverse kinematics for each sub-chain (theta, phi, and psi
 %   chains)
@@ -33,8 +33,10 @@ L5 = lengths(5);
 L6 = lengths(6);
 L7 = lengths(7);
 L8 = lengths(8);
-B1 = lengths(9);
-B2 = lengths(10);
+B1x = lengths(9);
+B2x = lengths(10);
+B1y = lengths(11);
+B2y = lengths(12);
 
 %% Extract foot pose:
 xF = footPose(1);
@@ -51,13 +53,14 @@ yAu = yF - (L7+L8)*sin(angF);
 
 %% IK for theta-chain:
 % Calculate (x,y) location of "hip" joint:
-xHtheta = -B1;
-yHtheta = 0;
+xHtheta = -B1x;
+yHtheta = B1y;
 
 % Calculate hip angle:
-xAptheta = B1 + xA;
-gammatheta = wrapToPi(abs(atan2(abs(yA),xAptheta)));
-alphatheta = wrapToPi(acos((xAptheta^2 + yA^2 + L1^2 - L2^2)/(2*L1*sqrt(xAptheta^2 + yA^2))));
+xAptheta = -xHtheta + xA;
+yAptheta = yHtheta - yA;
+gammatheta = wrapToPi(abs(atan2(yAptheta,xAptheta)));
+alphatheta = wrapToPi(acos((xAptheta^2 + yAptheta^2 + L1^2 - L2^2)/(2*L1*sqrt(xAptheta^2 + yAptheta^2))));
 theta1 = wrapToPi(-gammatheta - alphatheta);
 
 % Calculate (x,y) location of "knee" joint:
@@ -65,14 +68,14 @@ xKtheta = xHtheta + L1*cos(theta1);
 yKtheta = yHtheta + L1*sin(theta1);
 
 % Calculate knee angle:
-betatheta = wrapToPi(acos((L1^2 + L2^2 - xAptheta^2 - yA^2)/(2*L1*L2)));
+betatheta = wrapToPi(acos((L1^2 + L2^2 - xAptheta^2 - yAptheta^2)/(2*L1*L2)));
 theta2 = wrapToPi(pi - betatheta);
 
 % Calculate (x,y,angle) of "lower ankle" joint, using FK:
 xAtheta = xKtheta + L2*cos(theta1 + theta2);
 yAtheta = yKtheta + L2*sin(theta1 + theta2);
 theta3 = wrapToPi(angF - theta1 - theta2);
-
+            
 %% IK for phi-chain:
 % Calculate (x,y) location of "hip" joint:
 xHphi = 0;
@@ -95,16 +98,17 @@ phi2 = wrapToPi(pi - betaphi);
 xAuphi = xKphi + L4*cos(phi1 + phi2);
 yAuphi = yKphi + L4*sin(phi1 + phi2);
 phi3 = wrapToPi(angF - phi1 - phi2);
-
+            
 %% IK for psi-chain:
 % Calculate (x,y) location of "hip" joint:
-xHpsi = B2;
-yHpsi = 0;
+xHpsi = B2x;
+yHpsi = B2y;
 
 % Calculate hip angle:
-xAppsi = B2 - xA;
-gammapsi = wrapToPi(abs(atan2(abs(yA),xAppsi)));
-alphapsi = wrapToPi(acos((xAppsi^2 + yA^2 + L5^2 - L6^2)/(2*L5*sqrt(xAppsi^2 + yA^2))));
+xAppsi = B2x - xA;
+yAppsi = B2y - yA;
+gammapsi = wrapToPi(abs(atan2(yAppsi,xAppsi)));
+alphapsi = wrapToPi(acos((xAppsi^2 + yAppsi^2 + L5^2 - L6^2)/(2*L5*sqrt(xAppsi^2 + yAppsi^2))));
 psi1 = wrapToPi(pi + gammapsi + alphapsi);
 
 % Calculate (x,y) location of "knee" joint:
@@ -112,7 +116,7 @@ xKpsi = xHpsi + L5*cos(psi1);
 yKpsi = yHpsi + L5*sin(psi1);
 
 % Calculate knee angle:
-betapsi = wrapToPi(acos((L5^2 + L6^2 - xAppsi^2 - yA^2)/(2*L5*L6)));
+betapsi = wrapToPi(acos((L5^2 + L6^2 - xAppsi^2 - yAppsi^2)/(2*L5*L6)));
 psi2 = wrapToPi(pi + betapsi);
 
 % Calculate (x,y,angle) of "lower ankle" joint, using FK:

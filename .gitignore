@@ -1,2 +1,18 @@
+# Ignore list
+
+# C things:
+*.o
+
+# MATLAB autosave files:
+*.asv
+*.m~
+
+# TeX things:
+*.aux
+*.log
+*.synctex.gz
+*.bbl
+*.blg
+
 
 trep/multiple pendula/model_of_hoper.py

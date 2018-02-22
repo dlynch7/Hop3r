@@ -9,8 +9,10 @@ L5 = lengths(5);
 L6 = lengths(6);
 L7 = lengths(7);
 L8 = lengths(8);
-B1 = lengths(9);
-B2 = lengths(10);
+B1x = lengths(9);
+B2x = lengths(10);
+B1y = lengths(11);
+B2y = lengths(12);
 
 %% "unpack" link lengths from "lengths" input matrix:
 theta1 = angles(1,1);
@@ -40,8 +42,8 @@ yAu = yF - (L7+L8)*sin(angF);
 
 %% FK for theta-chain:
 % Calculate (x,y) location of "hip" joint:
-xHtheta = -B1;
-yHtheta = 0;
+xHtheta = -B1x;
+yHtheta = B1y;
 
 % Calculate (x,y) location of "knee" joint:
 xKtheta = xHtheta + L1*cos(theta1);
@@ -64,10 +66,10 @@ yKphi = yHphi + L3*sin(phi1);
 xAuphi = xKphi + L4*cos(phi1 + phi2);
 yAuphi = yKphi + L4*sin(phi1 + phi2);
 
-%% IK for psi-chain:
+%% FK for psi-chain:
 % Calculate (x,y) location of "hip" joint:
-xHpsi = B2;
-yHpsi = 0;
+xHpsi = B2x;
+yHpsi = B2y;
 
 % Calculate (x,y) location of "knee" joint:
 xKpsi = xHpsi + L5*cos(psi1);
@@ -82,7 +84,8 @@ yApsi = yKpsi + L6*sin(psi1 + psi2);
 hold off
 plot(0,0,'ro','MarkerSize',14); % mark body frame location
 hold on
-axis([-10 10 -35 5])
+% axis([-10 10 -35 5])
+axis([-0.3 0.3 -0.5 0.1])
 % axis([-3 3 -4.5 1.5]); % set figure size
 
 % theta-chain:
@@ -119,6 +122,6 @@ mytitleText1 = ['x = ',num2str(xF),', y = ',num2str(yF),' , \angle = ',...
 mytitleText2 = ['\theta_1 = ',num2str(theta1*(180/pi)),'\circ, \phi_1 = ',...
     num2str(phi1*(180/pi)),'\circ, \psi_1 = ',num2str(psi1*(180/pi)),'\circ'];
 title({mytitleText1,mytitleText2},'Interpreter','tex' ); 
-axis square
 
+axis square;
 end % end function
