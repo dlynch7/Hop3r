@@ -20,14 +20,14 @@ function J = dimensionObjectiveFunction(lengths, angles, wrench, twist, torqueWe
 % twist: 3x1 array
 %   [vx; vy; wz];
 
-% torqueWeight: 3x3 positive-definite array. Simplest case is a multiple of
-% eye(3);
+% torqueWeight: 3x3 symmetric positive-definite array.
+% Simplest case is a multiple of eye(3);
 %   [tW1a tW1b tW1c;
 %    tW2a tW2b tW2c;
 %    tW3a tW3b tW3c];
 
-% velWeight: 3x3 positive-definite array. Simplest case is a multiple of
-% eye(3);
+% velWeight: 3x3 symmetric positive-definite array.
+% Simplest case is a multiple of eye(3);
 %   [vW1a vW1b vW1c;
 %    vW2a vW2b vW2c;
 %    vW3a vW3b vW3c];
