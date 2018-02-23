@@ -32,6 +32,9 @@ function J = dimensionObjectiveFunction(lengths, angles, wrench, twist, torqueWe
 %    vW2a vW2b vW2c;
 %    vW3a vW3b vW3c];
 
+%% Output:
+% J: scalar value of the objective function
+
 %% Calculate joint torques (Nm) from input wrench:
 torques = wrench2torques(angles, lengths, wrench);
 
