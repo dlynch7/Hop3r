@@ -1,4 +1,4 @@
-%% Calculate torques using actuator Jacobian
+%% Calculate actuator Jacobian as function of joint angles
 L1 = 76.2/1000;
 L2 = 120.65/1000;
 L3 = 76.2/1000;
@@ -24,11 +24,22 @@ qu = [angles(1,2); angles(1,3); angles(2,2); angles(2,3); angles(3,2); angles(3,
 
 Ja = actuatorJacobian(qa, qu, L, 1);
 
+%% map end-effector wrench to joint torques
 Fx = 0;
-Fy = 0;
+Fy = 71.5;
 Mz = 0;
 
 % wrench = [Mz; Fx; Fy];
 wrench = [Fx; Fy; Mz];
 
 torques = transpose(Ja)*wrench;
+
+%% map end-effector twist to joint velocities
+vx = 0;
+vy = 1.4;
+wz = 0;
+
+twist = [vx; vy; wz];
+
+jointVels = inv(Ja)*twist; % joint velocities in rad/s
+jointVelsRPM = jointVels.*(60/(2*pi)); % convert to rpm
