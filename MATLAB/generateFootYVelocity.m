@@ -9,7 +9,7 @@ lengths = [15 15 10 10 15 15 5 15 10 10 -10 -10]'; % in centimeters
 t = 0:dt:T;
 
 % specify desired y-coord trajectory of foot
-Yfoot = -38 + 1.5*sin(t); 
+Yfoot = -30 + 2*sin(t); 
 
 actuatedAngs = zeros(3,length(t));
 for i = 1:length(t)
