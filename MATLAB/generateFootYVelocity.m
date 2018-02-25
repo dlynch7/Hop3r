@@ -9,7 +9,7 @@ lengths = [15 15 10 10 15 15 5 15 10 10 -10 -10]'; % in centimeters
 t = 0:dt:T;
 
 % specify desired y-coord trajectory of foot
-Yfoot = -30 + 2*sin(t); 
+Yfoot = -38 + 1.5*sin(t); 
 
 actuatedAngs = zeros(3,length(t));
 for i = 1:length(t)
@@ -31,6 +31,8 @@ actuatedVels = diff(actuatedAngs) / dt;
 %export to CSV file - to be imported into python/trep
 csvwrite('JointAngles.csv',actuatedAngs(1:end-1,:))
 csvwrite('JointVelocities.csv',actuatedVels);
+
+initialConds = subchainIK([0 Yfoot(1) -pi/2], lengths, 1)
 
 %plot results
 figure

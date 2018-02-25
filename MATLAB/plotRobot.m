@@ -85,7 +85,7 @@ hold off
 plot(0,0,'ro','MarkerSize',14); % mark body frame location
 hold on
 % axis([-10 10 -35 5])
-axis([-0.3 0.3 -0.5 0.1])
+% axis([-0.3 0.3 -0.5 0.1])
 % axis([-3 3 -4.5 1.5]); % set figure size
 
 % theta-chain:
