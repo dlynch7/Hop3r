@@ -5,7 +5,7 @@ function J = dimensionObjectiveFunction(lengths, angles, wrench, twist, torqueWe
 % using the actuator Jacobian (which is a function of link lengths and
 % joint angles).
 
-%% Inputs:
+% Inputs:
 % lengths: 12x1 array
 %   [L1; L2; L3; L4; L5; L6; L7; L8; B1x; B1y; B2x; B2y];
 
@@ -32,7 +32,7 @@ function J = dimensionObjectiveFunction(lengths, angles, wrench, twist, torqueWe
 %    vW2a vW2b vW2c;
 %    vW3a vW3b vW3c];
 
-%% Output:
+% Output:
 % J: scalar value of the objective function
 
 %% Calculate joint torques (Nm) from input wrench:
