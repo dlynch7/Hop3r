@@ -11,10 +11,10 @@ function [xF, yF, angF] = subchainFK(angles, lengths, chain)
 %                 ps1,  psi2,   psi3];
 %   lengths: the relevant dimensions of the robot, stored in a 10x1 column
 %       vector according to this order:
-%       lengths = [L1; L2; L3; L4; L5 L6; L7; L8; B1; B2], where
-%       B1, L1, L2, and L8 correspond to the theta-chain,
+%       lengths = [L1; L2; L3; L4; L5 L6; L7; L8; B1x; B2x; B1y; B2y], where
+%       B1x, B1y, L1, L2, and L8 correspond to the theta-chain,
 %       L3, L4, L7, and L8 correspond to the phi-chain, and
-%       B2, L5, L6, and L8 correspond to the psi-chain.
+%       B2x, B2y, L5, L6, and L8 correspond to the psi-chain.
 %   chain: a numeric option through which the user specifies which open
 %       sub-chain shall be used to compute the forward kinematics.
 %       1: theta-chain
@@ -39,8 +39,10 @@ L5 = lengths(5);
 L6 = lengths(6);
 L7 = lengths(7);
 L8 = lengths(8);
-B1 = lengths(9);
-B2 = lengths(10);
+B1x = lengths(9);
+B2x = lengths(10);
+B1y = lengths(11);
+B2y = lengths(12);
 
 %% "unpack joint angles from "angles" input matrix:
 % Note: this step is just for cleaner-looking code.
@@ -62,8 +64,8 @@ ps3 = angles(3,3);
 %% Compute FK according to "chain" input option
 switch chain
     case 1 % theta-chain
-        xF = -B1 + L1*cos(th1) + L2*cos(th1+th2) + L8*cos(th1+th2+th3);
-        yF = L1*sin(th1) + L2*sin(th1+th2) + L8*sin(th1+th2+th3);
+        xF = -B1x + L1*cos(th1) + L2*cos(th1+th2) + L8*cos(th1+th2+th3);
+        yF = B1y + L1*sin(th1) + L2*sin(th1+th2) + L8*sin(th1+th2+th3);
         angF = th1+th2+th3;
         
     case 2 % phi-chain
@@ -72,8 +74,8 @@ switch chain
         angF = ph1+ph2+ph3;
         
     case 3 % psi-chain
-        xF = B2 + L5*cos(ps1) + L6*cos(ps1+ps2) + L8*cos(ps1+ps2+ps3);
-        yF = L5*sin(ps1) + L6*sin(ps1+ps2) + L8*sin(ps1+ps2+ps3);
+        xF = B2x + L5*cos(ps1) + L6*cos(ps1+ps2) + L8*cos(ps1+ps2+ps3);
+        yF = B2y + L5*sin(ps1) + L6*sin(ps1+ps2) + L8*sin(ps1+ps2+ps3);
         angF = ps1+ps2+ps3;
     otherwise % error handling
         disp('subchainFK error: unknown unknown open sub-chain selection');
