@@ -105,8 +105,8 @@ xHpsi = B2x;
 yHpsi = B2y;
 
 % Calculate hip angle:
-xAppsi = B2x - xA;
-yAppsi = B2y - yA;
+xAppsi = xHpsi - xA;
+yAppsi = yHpsi - yA;
 gammapsi = wrapToPi(abs(atan2(yAppsi,xAppsi)));
 alphapsi = wrapToPi(acos((xAppsi^2 + yAppsi^2 + L5^2 - L6^2)/(2*L5*sqrt(xAppsi^2 + yAppsi^2))));
 psi1 = wrapToPi(pi + gammapsi + alphapsi);
