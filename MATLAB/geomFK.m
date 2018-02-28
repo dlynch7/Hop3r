@@ -163,4 +163,13 @@ footPose(1) = footX;
 footPose(2) = footY;
 footPose(3) = footAngle;
 
+%% Calculate the third angle in each open chain:
+th3 = footAngle - th1 - th2;
+ph3 = footAngle - ph1 - ph2;
+ps3 = footAngle - ps1 - ps2;
+
+qu(2) = th3;
+qu(4) = ph3;
+qu(6) = ps3;
+
 end
