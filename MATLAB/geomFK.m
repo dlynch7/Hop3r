@@ -1,10 +1,9 @@
 function [footPose,qu] = geomFK(qa,lengths,solOption)
 % Description:
-%   Computes the foot pose, using the actuated joint positions and the
-%   constraint Jacobian. Uses geometry (intersecting circles) to solve for
-%   the locations of the "ankle" (xA,yA) and the "upper ankle" (xuA, yuA)
-%   relative to the base frame, then calculates unactuated joint positions
-%   and the foot pose
+%   Computes the foot pose, using the actuated joint positions.
+%   Uses geometry (intersecting circles) to solve for the locations of the 
+%   "ankle" (xA,yA) and the "upper ankle" (xuA, yuA) relative to the base 
+%   frame, then calculates unactuated joint positions and the foot pose.
 %
 % Inputs:
 %   qa:     actuated joint positions (column vector)
@@ -153,5 +152,15 @@ fprintf('psi2 = %f degrees\n',ps2*(180/pi));
 
 % save ps2 to qu array:
 qu(5) = ps2;
+
+%% Calculate the foot pose:
+footAngle = wrapToPi(pi+ atan2(yuA - yA, xuA - xA));
+footX = xA + L8*cos(footAngle);
+footY = yA + L8*sin(footAngle);
+
+% "pack" foot pose variables into footPose:
+footPose(1) = footX;
+footPose(2) = footY;
+footPose(3) = footAngle;
 
 end
