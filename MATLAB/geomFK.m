@@ -80,7 +80,7 @@ else
     xA = xA2;
     yA = yA2;
 end
-fprintf('(xA, yA) = (%f, %f)\n',[xA, yA]);
+% fprintf('(xA, yA) = (%f, %f)\n',[xA, yA]);
 
 %% Calculate (xuA, yuA) using ph1 and (xA, yA):
 xkph = L3*cos(ph1);  % x-coordinate of phi-chain "knee"
@@ -103,7 +103,7 @@ else
     xuA = xuA2;
     yuA = yuA2;
 end
-fprintf('(xuA, yuA) = (%f, %f)\n',[xuA, yuA]);
+% fprintf('(xuA, yuA) = (%f, %f)\n',[xuA, yuA]);
 
 %% Solve for "knee" angles (th2, ph2, ps2):
 
@@ -120,7 +120,7 @@ yAptheta = yHtheta - yA;
 betatheta = wrapToPi(acos((L1^2 + L2^2 - xAptheta^2 - yAptheta^2)/(2*L1*L2)));
 th2 = wrapToPi(pi - betatheta);
 
-fprintf('theta2 = %f degrees\n',th2*(180/pi));
+% fprintf('theta2 = %f degrees\n',th2*(180/pi));
 
 % save th2 to qu array:
 qu(1) = th2;
@@ -130,7 +130,7 @@ qu(1) = th2;
 betaphi = wrapToPi(acos((L3^2 + L4^2 - xuA^2 - yuA^2)/(2*L3*L4)));
 ph2 = wrapToPi(pi - betaphi);
 
-fprintf('phi2 = %f degrees\n',ph2*(180/pi));
+% fprintf('phi2 = %f degrees\n',ph2*(180/pi));
 
 % save ph2 to qu array:
 qu(3) = ph2;
@@ -148,7 +148,7 @@ yAppsi = yHpsi - yA;
 betapsi = wrapToPi(acos((L5^2 + L6^2 - xAppsi^2 - yAppsi^2)/(2*L5*L6)));
 ps2 = wrapToPi(pi + betapsi);
 
-fprintf('psi2 = %f degrees\n',ps2*(180/pi));
+% fprintf('psi2 = %f degrees\n',ps2*(180/pi));
 
 % save ps2 to qu array:
 qu(5) = ps2;
