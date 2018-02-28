@@ -5,6 +5,10 @@ function [footPose,qu] = geomFK(qa,lengths,solOption)
 %   "ankle" (xA,yA) and the "upper ankle" (xuA, yuA) relative to the base 
 %   frame, then calculates unactuated joint positions and the foot pose.
 %
+% References:
+%   https://math.stackexchange.com/questions/256100/how-can-i-find-the-points-at-which-two-circles-intersect
+%   http://mathworld.wolfram.com/Circle-CircleIntersection.html
+%
 % Inputs:
 %   qa:     actuated joint positions (column vector)
 %       qa = [theta1; phi1; psi1];
