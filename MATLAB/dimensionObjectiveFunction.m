@@ -31,7 +31,7 @@ lengths = [symlengths(1); symlengths(2); symlengths(3); symlengths(4);
 
 %% Define the end-effector workspace that will be searched for the "achievable" workspace:
 footXarray = linspace(-0.25, 0.25, 11);
-footYarray = linspace(-0.5, -0.0, 11);
+footYarray = linspace(-0.25, -0.0, 11);
 footAnglearray = linspace(-3*pi/4, -pi/4, 11);
 % footXarray = linspace(-0.0, 0.0, 11);
 % footYarray = linspace(-0.25, -0.25, 11);
