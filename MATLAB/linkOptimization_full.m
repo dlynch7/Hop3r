@@ -1,7 +1,7 @@
 %%
-clear;
-close all;
-clc;
+% clear;
+% close all;
+% clc;
 
 %% Define minimum and maximum lengths for each link:
 L1min = 0.05;
@@ -40,31 +40,14 @@ B1ymax = 0.15;
 B2ymin = 0.05;
 B2ymax = 0.15;
 
-linkMin = [L1min; L2min; L3min; L4min; L5min; L6min; L7min; L8min; B1xmin; B2xmin; B1ymin; B2min];
-linkMax = [L1max; L2max; L3max; L4max; L5max; L6max; L7max; L8max; B1xmax; B2xmax; B1ymax; B2max];
+linkMin = [L1min; L2min; L3min; L4min; L5min; L6min; L7min; L8min; B1xmin; B2xmin; B1ymin; B2ymin];
+linkMax = [L1max; L2max; L3max; L4max; L5max; L6max; L7max; L8max; B1xmax; B2xmax; B1ymax; B2ymax];
 
-%% Specify desired end-effector pose:
-footX = 0;
-footY = -0.2;
-footAng = -pi/2;
 
-%% Specify desired end-effector wrench:
-Fx = 0;
-Fy = -71.5;
+%% Specify desired end-effector wrench in end-effector frame:
+Fx = 71.5; % force directed distally along link
+Fy = 0;
 Mz = 0;
 
-%% Specify desired end-effector twist:
-Vx = 0;
-Vy = -1.4;
-Wz = 0;
-
-%% Evaluate IK to find angles: [angles] = subchainIK(footPose, L, 1);
-
-qa = [angles(1,1); angles(2,1); angles(3,1)];
-
-qu = [angles(1,2); angles(1,3); angles(2,2); angles(2,3); angles(3,2); angles(3,3)];
-
-Ja = actuatorJacobian(qa, qu, L, 1);
-
 %% Use fmincon to optimize link lengths:
-links = fmincon(dimensionObjectiveFunction,
+% links = fmincon(dimensionObjectiveFunction,
