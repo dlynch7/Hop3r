@@ -1,7 +1,7 @@
 %%
-% clear;
-% close all;
-% clc;
+clear;
+close all;
+clc;
 
 %% Define minimum and maximum lengths for each link:
 L1min = 0.05;
@@ -40,14 +40,35 @@ B1ymax = 0.15;
 B2ymin = 0.05;
 B2ymax = 0.15;
 
-linkMin = [L1min; L2min; L3min; L4min; L5min; L6min; L7min; L8min; B1xmin; B2xmin; B1ymin; B2ymin];
-linkMax = [L1max; L2max; L3max; L4max; L5max; L6max; L7max; L8max; B1xmax; B2xmax; B1ymax; B2ymax];
-
+linkMin = [L1min; L2min; L3min; L4min; L7min; L8min; B1xmin; B1ymin];
+linkMax = [L1max; L2max; L3max; L4max; L7max; L8max; B1xmax; B1ymax];
 
 %% Specify desired end-effector wrench in end-effector frame:
 Fx = 71.5; % force directed distally along link
 Fy = 0;
 Mz = 0;
 
+ee_wrench = [Fx; Fy; Mz];
+
 %% Use fmincon to optimize link lengths:
-% links = fmincon(dimensionObjectiveFunction,
+
+% objective function weights:
+torqueWeight = 1;
+workspaceVolWeight = 1;
+
+% create anonymous function:
+f = @(x)dimensionObjectiveFunction(x,ee_wrench,torqueWeight,workspaceVolWeight);
+
+% initial guess:
+x0 = [0.0762; 0.1207; 0.0762; 0.0762; 0.0508; 0.1500; 0.1016; 0.02];
+
+% no linear constraints:
+A = [];
+b = [];
+Aeq = [];
+beq = [];
+
+% bounds
+lb = linkMin;
+ub = linkMax;
+linkOpt = fmincon(f,x0,A,b,Aeq,beq,lb,ub)
