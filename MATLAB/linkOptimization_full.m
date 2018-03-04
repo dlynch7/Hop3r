@@ -53,7 +53,7 @@ ee_wrench = [Fx; Fy; Mz];
 %% Use fmincon to optimize link lengths:
 
 % objective function weights:
-torqueWeight = 1;
+torqueWeight = 100;
 workspaceVolWeight = 1;
 
 % create anonymous function:
