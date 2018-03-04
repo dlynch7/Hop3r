@@ -45,17 +45,17 @@ for i = 1:length(footXarray)
                     torques = wrench2torques(tempAngles, lengths, space_wrench);
                     torqueMag = norm(torques);
                     torqueMagArray = horzcat(torqueMagArray,torqueMag);
-                    fprintf(['passed: x = ',num2str(footXarray(i)),', y = ',...
-                        num2str(footYarray(j)),', ang = ',num2str(footAnglearray(k)),'\n']);
+%                     fprintf(['passed: x = ',num2str(footXarray(i)),', y = ',...
+%                         num2str(footYarray(j)),', ang = ',num2str(footAnglearray(k)),'\n']);
                 else
-                    fprintf(['failed: x = ',num2str(footXarray(i)),', y = ',...
-                        num2str(footYarray(j)),', ang = ',...
-                        num2str(footAngleDarray(k)),' exceeds joint limits.\n']);
+%                     fprintf(['failed: x = ',num2str(footXarray(i)),', y = ',...
+%                         num2str(footYarray(j)),', ang = ',...
+%                         num2str(footAngleDarray(k)),' exceeds joint limits.\n']);
                 end
             catch
-                fprintf(['failed: x = ',num2str(footXarray(i)),', y = ',...
-                        num2str(footYarray(j)),', ang = ',...
-                        num2str(footAnglearray(k)),' is unsolvable.\n']);
+%                 fprintf(['failed: x = ',num2str(footXarray(i)),', y = ',...
+%                         num2str(footYarray(j)),', ang = ',...
+%                         num2str(footAnglearray(k)),' is unsolvable.\n']);
             end % end try/catch
         end
     end
@@ -63,7 +63,7 @@ end
 
 %% Calculate "volume" of reachable workspace:
 volWorkspace = (range(reachablePose(1,:))^2)*(range(reachablePose(2,:))^2)*(range(reachablePose(3,:))^2);
-fprintf('volWorkspace = %f\n',volWorkspace);
+% fprintf('volWorkspace = %f\n',volWorkspace);
 
 %% Calculate joint torques (Nm) from input wrench:
 torqueMagMax = max(torqueMagArray);
