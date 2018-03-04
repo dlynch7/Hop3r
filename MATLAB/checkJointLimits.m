@@ -35,4 +35,9 @@ else
     withinLimits = 0; % a theta-chain angle is out of range
 end
 
+%% check for singularity at ankle:
+if ((theta3 - psi3) < -pi)
+    withinLimits = 0;
+end
+
 end
