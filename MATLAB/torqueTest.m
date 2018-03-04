@@ -26,7 +26,7 @@ Ja = actuatorJacobian(qa, qu, L, 1);
 
 %% map end-effector wrench to joint torques
 Fx = 0;
-Fy = 71.5;
+Fy = -71.5;
 Mz = 0;
 
 % wrench = [Mz; Fx; Fy];
@@ -36,10 +36,16 @@ torques = transpose(Ja)*wrench;
 
 %% map end-effector twist to joint velocities
 vx = 0;
-vy = 1.4;
+vy = -1.4;
 wz = 0;
 
 twist = [vx; vy; wz];
 
-jointVels = inv(Ja)*twist; % joint velocities in rad/s
+jointVels = pinv(Ja)*twist; % joint velocities in rad/s
 jointVelsRPM = jointVels.*(60/(2*pi)); % convert to rpm
+
+%% compute value of objective function:
+TW = eye(3);
+VW = eye(3);
+J = dimensionObjectiveFunction(L,angles,wrench,twist,TW,VW);
+fprintf("Objective function value: %f\n",J);
