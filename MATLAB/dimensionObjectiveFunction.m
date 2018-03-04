@@ -1,4 +1,4 @@
-function J = dimensionObjectiveFunction(lengths, wrench, torqueWeight, volWeight)
+function J = dimensionObjectiveFunction(symlengths, wrench, torqueWeight, volWeight)
 %% Description:
 % Computes a quadratic objective function (for optimization) using torques
 % and joint velocities, calculated from an input wrench and an input twist
@@ -6,8 +6,13 @@ function J = dimensionObjectiveFunction(lengths, wrench, torqueWeight, volWeight
 % joint angles).
 
 % Inputs:
-% lengths: 12x1 array
-%   [L1; L2; L3; L4; L5; L6; L7; L8; B1x; B1y; B2x; B2y];
+% symlengths: 8x1 array
+%   [L1; L2; L3; L4; L7; L8; B1x; B1y;];
+%   symlengths is converted to lengths (12x1) by the following symmetries:
+%       L5 = L1;
+%       L6 = L2;
+%       B2x = B1x;
+%       B2y = B1y;
 
 % wrench: 3x1 array
 %   [Fx; Fy; Mz];
@@ -18,6 +23,11 @@ function J = dimensionObjectiveFunction(lengths, wrench, torqueWeight, volWeight
 
 % Output:
 % J: scalar value of the objective function
+
+%% Convert "symlengths" to "lengths":
+lengths = [symlengths(1); symlengths(2); symlengths(3); symlengths(4);
+           symlengths(1); symlengths(2); symlengths(5); symlengths(6);
+           symlengths(7); symlengths(7); symlengths(8); symlengths(8)];
 
 %% Define the end-effector workspace that will be searched for the "achievable" workspace:
 footXarray = linspace(-0.25, 0.25, 11);
