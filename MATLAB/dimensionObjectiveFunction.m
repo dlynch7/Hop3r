@@ -20,12 +20,15 @@ function J = dimensionObjectiveFunction(lengths, wrench, torqueWeight, volWeight
 % J: scalar value of the objective function
 
 %% Define the end-effector workspace that will be searched for the "achievable" workspace:
-% footXarray = linspace(-0.25, 0.25, 11);
-footXarray = linspace(-0.05, 0.05, 11);
-% footYarray = linspace(-0.5, 0.0, 11);
-footYarray = linspace(-0.25, -0.25, 11);
-% footAnglearray = linspace(-pi/4, -3*pi/4, 11);
-footAnglearray = linspace(-pi/2, -pi/2, 11);
+footXarray = linspace(-0.25, 0.25, 11);
+footYarray = linspace(-0.5, -0.0, 11);
+footAnglearray = linspace(-3*pi/4, -pi/4, 11);
+% footXarray = linspace(-0.0, 0.0, 11);
+% footYarray = linspace(-0.25, -0.25, 11);
+% footAnglearray = linspace(-80*pi/180, -80*pi/180, 11);
+
+reachablePose = []; % array to store all the reachable foot poses
+torqueMagArray = [];
 
 %% Brute-force exploration of workspace:
 for i = 1:length(footXarray)
@@ -34,20 +37,22 @@ for i = 1:length(footXarray)
             try
                 footPose = [footXarray(i); footYarray(j); footAnglearray(k)];
                 [tempAngles] = subchainIK(footPose,lengths,0);
-                if 1
-                %                 if checkJointLimits(tempAngles)
-                    anglesD{i,j,k} = tempAngles.*(180/pi);
-                    plotRobot(footPose,lengths,tempAngles);
+                if checkJointLimits(tempAngles)
+                    reachablePose = horzcat(reachablePose, footPose);
+                    space_wrench = [cos(footPose(3)) -sin(footPose(3)) 0; 
+                                   sin(footPose(3)) cos(footPose(3)) 0;
+                                   0 0 1]*wrench;
+                    torques = wrench2torques(tempAngles, lengths, space_wrench);
+                    torqueMag = norm(torques);
+                    torqueMagArray = horzcat(torqueMagArray,torqueMag);
                     fprintf(['passed: x = ',num2str(footXarray(i)),', y = ',...
                         num2str(footYarray(j)),', ang = ',num2str(footAnglearray(k)),'\n']);
                 else
-                    anglesD{i,j,k} = NaN;
                     fprintf(['failed: x = ',num2str(footXarray(i)),', y = ',...
                         num2str(footYarray(j)),', ang = ',...
                         num2str(footAngleDarray(k)),' exceeds joint limits.\n']);
                 end
             catch
-                anglesD{i,j,k} = NaN;
                 fprintf(['failed: x = ',num2str(footXarray(i)),', y = ',...
                         num2str(footYarray(j)),', ang = ',...
                         num2str(footAnglearray(k)),' is unsolvable.\n']);
@@ -56,9 +61,13 @@ for i = 1:length(footXarray)
     end
 end
 
+%% Calculate "volume" of reachable workspace:
+volWorkspace = (range(reachablePose(1,:))^2)*(range(reachablePose(2,:))^2)*(range(reachablePose(3,:))^2);
+fprintf('volWorkspace = %f\n',volWorkspace);
+
 %% Calculate joint torques (Nm) from input wrench:
-torques = wrench2torques(angles, lengths, wrench);
+torqueMagMax = max(torqueMagArray);
 
 %% Calculate value of objective function:
-J = torqueWeight*(torqueMax^2) + volWeight*(volWorkspace^2);
+J = torqueWeight*(torqueMagMax^2) + volWeight*((1/volWorkspace)^2);
 end
