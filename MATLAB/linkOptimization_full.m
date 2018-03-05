@@ -1,7 +1,7 @@
 %%
-clear;
-close all;
-clc;
+% clear;
+% close all;
+% clc;
 
 %% Define minimum and maximum lengths for each link:
 L1min = 0.05;
@@ -34,10 +34,10 @@ B1xmax = 0.15;
 B2xmin = 0.05;
 B2xmax = 0.15;
 
-B1ymin = 0.05;
+B1ymin = -0.15;
 B1ymax = 0.15;
 
-B2ymin = 0.05;
+B2ymin = -0.15;
 B2ymax = 0.15;
 
 linkMin = [L1min; L2min; L3min; L4min; L7min; L8min; B1xmin; B1ymin];
@@ -50,7 +50,7 @@ Mz = 0;
 
 ee_wrench = [Fx; Fy; Mz];
 
-%% Use fmincon to optimize link lengths:
+%% Optimize link lengths:
 
 % objective function weights:
 torqueWeight = 100;
@@ -71,4 +71,21 @@ beq = [];
 % bounds
 lb = linkMin;
 ub = linkMax;
-linkOpt = fmincon(f,x0,A,b,Aeq,beq,lb,ub)
+
+% optimize link lengths using fmincon():
+[linkOpt_fmc,fval_fmc,exitflag_fmc,output_fmc] = fmincon(f,x0,A,b,Aeq,beq,lb,ub);
+fprintf('fmincon() optimization results: \n');
+fprintf('The number of iterations was : %d\n', output_fmc.iterations);
+% fprintf('The number of function evaluations was : %d\n', output_fmc.funccount);
+fprintf('The best function value found was : %g\n', fval_fmc);
+fprintf('optimal link lengths: \n');
+linkOpt_fmc
+
+% % optimize link lengths using simulated annealing:
+% [linkOpt_sa,fval_sa,exitflag_sa,output_sa] = simulannealbnd(f,x0,lb,ub);
+% fprintf('simulated annealing optimization results: \n');
+% fprintf('The number of iterations was : %d\n', output_sa.iterations);
+% % fprintf('The number of function evaluations was : %d\n', output_sa.funccount);
+% fprintf('The best function value found was : %g\n', fval_sa);
+% fprintf('optimal link lengths: \n');
+% linkOpt_sa
