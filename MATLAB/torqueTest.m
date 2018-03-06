@@ -6,7 +6,7 @@ L4 = 76.2/1000;
 L5 = L1;
 L6 = L2;
 L7 = 50.8/1000;
-L8 = 165.1/1000;
+L8 = 120/1000;
 L9 = 101.6/1000;
 L10 = 101.6/1000;
 L11 = 20/1000;
@@ -14,7 +14,7 @@ L12 = 20/1000;
 
 L = [L1; L2; L3; L4; L5; L6; L7; L8; L9; L10; L11; L12];
 
-footPose = [0; -279.4/1000; -pi/2];
+footPose = [0; -250/1000; -pi/2];
 
 [angles] = subchainIK(footPose, L, 1);
 
@@ -26,7 +26,7 @@ Ja = actuatorJacobian(qa, qu, L, 1);
 
 %% map end-effector wrench to joint torques
 Fx = 0;
-Fy = 71.5;
+Fy = -71.5;
 Mz = 0;
 
 % wrench = [Mz; Fx; Fy];
@@ -36,10 +36,16 @@ torques = transpose(Ja)*wrench;
 
 %% map end-effector twist to joint velocities
 vx = 0;
-vy = 1.4;
+vy = -1.4;
 wz = 0;
 
 twist = [vx; vy; wz];
 
-jointVels = inv(Ja)*twist; % joint velocities in rad/s
+jointVels = pinv(Ja)*twist; % joint velocities in rad/s
 jointVelsRPM = jointVels.*(60/(2*pi)); % convert to rpm
+
+%% compute value of objective function:
+TW = eye(3);
+VW = eye(3);
+J = dimensionObjectiveFunction(L,angles,wrench,twist,TW,VW);
+fprintf("Objective function value: %f\n",J);

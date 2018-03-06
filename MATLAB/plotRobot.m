@@ -80,13 +80,9 @@ xApsi = xKpsi + L6*cos(psi1 + psi2);
 yApsi = yKpsi + L6*sin(psi1 + psi2);
 
 %% Plot
-% figure % plot in a new window
 hold off
 plot(0,0,'ro','MarkerSize',14); % mark body frame location
 hold on
-% axis([-10 10 -35 5])
-% axis([-0.3 0.3 -0.5 0.1])
-% axis([-3 3 -4.5 1.5]); % set figure size
 
 % theta-chain:
 line([0,xHtheta],[0,yHtheta],'Color','k'); % draw link B1
@@ -107,7 +103,7 @@ line([0,xHpsi],[0,yHpsi],'Color','k'); % draw link B2
 plot(xHpsi,yHpsi,'go','MarkerSize',10); % mark hip location (psi-chain)
 line([xHpsi,xKpsi],[yHpsi,yKpsi],'Color','k'); % draw link 5
 plot(xKpsi,yKpsi,'go','MarkerSize',10); % mark knee location (psi-chain)
-line([xKpsi,xApsi],[yKpsi,yApsi],'Color','k'); % draw link 2
+line([xKpsi,xApsi],[yKpsi,yApsi],'Color','k'); % draw link 6
 plot(xApsi,yApsi,'go','MarkerSize',18); % mark lower ankle location (calculated from FK)
 
 % most distal leg (configuration determined by foot pose):
@@ -115,7 +111,7 @@ plot(xAu,yAu,'go','MarkerSize',10); % mark upper ankle location (calculated from
 line([xAu,xA],[yAu,yA],'Color','k'); % draw link 7
 plot(xA,yA,'go','MarkerSize',10); % mark lower ankle location (calculated from foot pose)
 line([xA,xF],[yA,yF],'Color','k'); % draw link 8
-plot(xF,yF,'bo','MarkerSize',12); % mark foot location
+plot(xF,yF,'bo','MarkerSize',12); % mark foot location   
 
 mytitleText1 = ['x = ',num2str(xF),', y = ',num2str(yF),' , \angle = ',...
     num2str(angF*(180/pi)),'\circ'];

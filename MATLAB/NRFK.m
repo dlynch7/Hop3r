@@ -38,14 +38,24 @@ convMeasure = thresh*10; % initialize convergence measure
 G0 = zeros(6,1);
 G1 = zeros(6,1);
 
+convMeasurePrev = convMeasure*100; % initialize previous convergence measure
+
 while(convMeasure > thresh)
     [G0] = constraintVector(qa,qu0,lengths);
     Jc = constraintJacobian(qa,qu0,lengths);
-    qu1 = qu0 - pinv(Jc)*G0;
+    qu1 = qu0 - pinv(Jc)*G0; % candidate step
     [G1] = constraintVector(qa,qu1,lengths);
     convMeasure = norm(G0 - G1)/norm(G0); % compute convergence measure with candidate soln.
     fprintf('convergence measure: %f\n',convMeasure);
-    qu0 = qu1; % update approximate unactuated joint positions
+    % perform a binary search:
+    if convMeasure < convMeasurePrev %% if the approximation is converging
+        qu0 = qu1; % update approximate unactuated joint positions
+        convMeasurePrev = convMeasure; % prepare for next iteration
+        fprintf('took full step\n');
+    else
+        qu0 = (qu0 + qu1)./2; % take a smaller step and try again
+        fprintf('halved step size\n');
+    end
 end % end Newton-Raphson root finding algorithm
 
 theta = [qa(1); qu0(1); qu0(2)]; % theta-chain joint positions
