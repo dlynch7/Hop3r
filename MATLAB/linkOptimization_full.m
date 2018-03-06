@@ -3,6 +3,17 @@
 % close all;
 % clc;
 
+%% TO-DO:
+% 0. reduce range of foot angles in searchable workspace.
+% 1. Compute torque of a subset of the searchable foot angles.
+% 2. Plot point cloud of reachable workspace, check for contiguity.
+% 3. Generage mesh from point cloud, compute surface area (or volume?) of
+% mesh.
+% 4. Do different initial guesses converge to the same optimizer?
+% 5. If dependence on initial guess is significant, try simulated annealing
+% in scipy.
+% 6. Consider reachable workspace as constraint rather than variable.
+
 %% Define minimum and maximum lengths for each link:
 L1min = 0.05;
 L1max = 0.15;
@@ -56,8 +67,11 @@ ee_wrench = [Fx; Fy; Mz];
 torqueWeight = 100;
 workspaceVolWeight = 1;
 
+% resolution of searched workspace:
+rez = 11;
+
 % create anonymous function:
-f = @(x)dimensionObjectiveFunction(x,ee_wrench,torqueWeight,workspaceVolWeight);
+f = @(x)dimensionObjectiveFunction(x,ee_wrench,torqueWeight,workspaceVolWeight,0);
 
 % initial guess:
 x0 = [0.0762; 0.1207; 0.0762; 0.0762; 0.0508; 0.1500; 0.1016; 0.02];
@@ -81,11 +95,5 @@ fprintf('The best function value found was : %g\n', fval_fmc);
 fprintf('optimal link lengths: \n');
 linkOpt_fmc
 
-% % optimize link lengths using simulated annealing:
-% [linkOpt_sa,fval_sa,exitflag_sa,output_sa] = simulannealbnd(f,x0,lb,ub);
-% fprintf('simulated annealing optimization results: \n');
-% fprintf('The number of iterations was : %d\n', output_sa.iterations);
-% % fprintf('The number of function evaluations was : %d\n', output_sa.funccount);
-% fprintf('The best function value found was : %g\n', fval_sa);
-% fprintf('optimal link lengths: \n');
-% linkOpt_sa
+%% Visualize reachable workspace of optimal link lengths:
+J_opt = dimensionObjectiveFunction(linkOpt_fmc,ee_wrench,torqueWeight,workspaceVolWeight,51,1);
