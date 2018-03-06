@@ -86,27 +86,27 @@ if vizOption==1
 
     figure;
     % Plot the scattered points:
-    subplot(2,2,1);
+%     subplot(2,2,1);
     scatter3(reachablePoseT(:,1),reachablePoseT(:,2),reachablePoseT(:,3),'.');
-    axis square;
-    title('Interior points');
-
-    %# Plot the tetrahedral mesh:
-    subplot(2,2,2);
-    tetramesh(DT);
-    axis square;
-    title('Tetrahedral mesh');
-
-    %# Plot the 3-D convex hull:
-    subplot(2,2,3);
-    trisurf(hullFacets,DT.Points(:,1),DT.Points(:,2),DT.Points(:,3),'FaceColor','c')
-    axis square;
-    title('Convex hull');
+%     axis square;
+%     title('Interior points');
+% 
+%     %# Plot the tetrahedral mesh:
+%     subplot(2,2,2);
+%     tetramesh(DT);
+%     axis square;
+%     title('Tetrahedral mesh');
+% 
+%     %# Plot the 3-D convex hull:
+%     subplot(2,2,3);
+%     trisurf(hullFacets,DT.Points(:,1),DT.Points(:,2),DT.Points(:,3),'FaceColor','c')
+%     axis square;
+%     title('Convex hull');
     
-%     xlabel('Foot X')
-%     ylabel('Foot Y')
-%     zlabel('Foot angle')
-%     title('Reachable foot workspace')
+    xlabel('Foot X')
+    ylabel('Foot Y')
+    zlabel('Foot angle')
+    title('Reachable foot workspace')
 end
 
 %% Calculate "volume" of reachable workspace:
