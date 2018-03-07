@@ -39,7 +39,7 @@ CFLAGS = -g -mthumb -mcpu=cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
 CFLAGS +=-Os -ffunction-sections -fdata-sections -MD -std=c99 -Wall
 CFLAGS += -pedantic -DPART_$(MCU) -c -I$(TIVAWARE_PATH) -I$(INCDIR)
 CFLAGS += -DTARGET_IS_BLIZZARD_RA1
-LDFLAGS = -T $(LD_SCRIPT) --entry ResetISR --gc-sections
+LDFLAGS = --entry ResetISR --gc-sections -T$(LD_SCRIPT)
 
 #######################################
 # end of user configuration
@@ -50,6 +50,7 @@ LDFLAGS = -T $(LD_SCRIPT) --entry ResetISR --gc-sections
 #######################################
 CC = arm-none-eabi-gcc
 LD = arm-none-eabi-ld
+# LD = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
 RM      = rm -f
 MKDIR	= mkdir -p

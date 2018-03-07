@@ -1,7 +1,6 @@
 // code adapted from
 // https://eewiki.net/display/microcontroller/I2C+Communication+with+the+TI+Tiva+TM4C123GXL#I2CCommunicationwiththeTITivaTM4C123GXL-ExampleofReadingdatafromaFreescaleMMA7455L3-axisAccelerometer
 
-#include "i2c_master_no_int.h"
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -11,27 +10,19 @@
 #include "inc/hw_gpio.h"
 #include "driverlib/i2c.h"
 #include "driverlib/sysctl.h"
+// #include "driverlib/fpu.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
-
-#define ACCEL_SLAVE_ADDR 0x69
-#define WHOAMI 0x0F
-#define XOUT8 0x06
-#define XOUT_L
-#define XOUT_H
-#define YOUT8 0x07
-#define YOUT_L
-#define YOUT_H
-#define ZOUT8 0x08
-#define ZOUT_L
-#define ZOUT_H
+#include "i2c_master_no_int.h"
+#include "LSM6DS33.h"
 
 void InitI2C0(void);
 void I2CSend(uint8_t slave_addr, uint8_t num_of_args, ...);
 void I2CSendString(uint32_t slave_addr, char array[]);
 uint32_t I2CReceive(uint32_t slave_addr, uint8_t reg);
+void LSM6DS33_init(void); // initialize LSM6DS33 IMU
 
 void InitConsole(void) // set up UART0 to use as a console
 {
@@ -79,13 +70,6 @@ void SimpleDelay(void)
     SysCtlDelay(16000000 / 3);
 }
 
-// uint8_t ReadAccel(uint8_t reg)
-// {
-//     uint8_t accelData =  I2CReceive(ACCEL_SLAVE_ADDR, reg);
-//
-//     return accelData;
-// }
-
 int main(void)
 {
     // Set the clocking to run directly from the external crystal/oscillator.
@@ -96,22 +80,24 @@ int main(void)
 
     //initialize I2C module 0
     InitI2C0();
+    UARTprintf("I2C0 initialized!\n");
 
-    uint8_t Ax = 0;
-    uint8_t Ay = 0;
-    uint8_t Az = 0;
+    int16_t Ax = 0;
+    int16_t Ay = 0;
+    int16_t Az = 0;
     uint8_t whoiam = 0;
     uint8_t counter = 0;
 
-    UARTprintf("I2C0 initialized!\n");
+    LSM6DS33_init();
+    UARTprintf("IMU initialized!\n");
 
     while(1)
     {
-      // Ax = ReadAccel(XOUT8);
-      // Ay = ReadAccel(YOUT8);
-      // Az = ReadAccel(ZOUT8);
+      Ax = getxXL();
+      Ay = getyXL();
+      Az = getzXL();
       UARTprintf("Read #%d\n",counter);
-      whoiam = I2CReceive(ACCEL_SLAVE_ADDR, WHOAMI);
+      whoiam = WhoAmI();
 
       UARTprintf("WhoIAm: %d\tX: %d\tY: %d\tZ: %d\n",whoiam,Ax,Ay,Az);
 
