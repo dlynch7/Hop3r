@@ -94,6 +94,14 @@ In this case, it is communicating with an AEAT-6600 magnetic encoder.
 //*****************************************************************************
 #define NUM_SSI_DATA            3
 
+void SimpleDelay(void)
+{
+    //
+    // Delay cycles for 1 second
+    //
+    SysCtlDelay(16000000 / 3);
+}
+
 //*****************************************************************************
 //
 // This function sets up UART0 to be used for a console to display information
@@ -157,7 +165,7 @@ main(void)
 
     uint32_t pui32DataTx[NUM_SSI_DATA];
     uint32_t pui32DataRx[NUM_SSI_DATA];
-    uint32_t ui32Index;
+    // uint32_t ui32Index;
 
     //
     // Set the clocking to run directly from the external crystal/oscillator.
@@ -249,40 +257,39 @@ main(void)
     //
     SSIEnable(SSI0_BASE);
 
-    //
-    // Read any residual data from the SSI port.  This makes sure the receive
-    // FIFOs are empty, so we don't read any unwanted junk.  This is done here
-    // because the SPI SSI mode is full-duplex, which allows you to send and
-    // receive at the same time.  The SSIDataGetNonBlocking function returns
-    // "true" when data was returned, and "false" when no data was returned.
-    // The "non-blocking" function checks if there is any data in the receive
-    // FIFO and does not "hang" if there isn't.
-    //
-    while(SSIDataGetNonBlocking(SSI0_BASE, &pui32DataRx[0]))
-    {
-    }
+    while(1) {
+        //
+        // Read any residual data from the SSI port.  This makes sure the receive
+        // FIFOs are empty, so we don't read any unwanted junk.  This is done here
+        // because the SPI SSI mode is full-duplex, which allows you to send and
+        // receive at the same time.  The SSIDataGetNonBlocking function returns
+        // "true" when data was returned, and "false" when no data was returned.
+        // The "non-blocking" function checks if there is any data in the receive
+        // FIFO and does not "hang" if there isn't.
+        //
+        while(SSIDataGetNonBlocking(SSI0_BASE, &pui32DataRx[0]))
+        {
+        }
 
-    //
-    // Initialize the data to send.
-    //
-    pui32DataTx[0] = 's';
-    pui32DataTx[1] = 'p';
-    pui32DataTx[2] = 'i';
+        //
+        // Initialize the data to send.
+        //
+        pui32DataTx[0] = 's';
+        pui32DataTx[1] = 'p';
+        pui32DataTx[2] = 'i';
 
-    //
-    // Display indication that the SSI is transmitting data.
-    //
-    UARTprintf("Sent:\n  ");
+        //
+        // Display indication that the SSI is transmitting data.
+        //
+        UARTprintf("Sent:\n  ");
 
-    //
-    // Send 3 bytes of data.
-    //
-    for(ui32Index = 0; ui32Index < NUM_SSI_DATA; ui32Index++)
-    {
+        //
+        // Send 1 byte of data.
+        //`
         //
         // Display the data that SSI is transferring.
         //
-        UARTprintf("'%c' ", pui32DataTx[ui32Index]);
+        UARTprintf("'%c' ", pui32DataTx[0]);
 
         //
         // Send the data using the "blocking" put function.  This function
@@ -290,41 +297,38 @@ main(void)
         // This allows you to assure that all the data you send makes it into
         // the send FIFO.
         //
-        SSIDataPut(SSI0_BASE, pui32DataTx[ui32Index]);
-    }
+        SSIDataPut(SSI0_BASE, pui32DataTx[0]);
 
-    //
-    // Wait until SSI0 is done transferring all the data in the transmit FIFO.
-    //
-    while(SSIBusy(SSI0_BASE))
-    {
-    }
+        //
+        // Wait until SSI0 is done transferring all the data in the transmit FIFO.
+        //
+        while(SSIBusy(SSI0_BASE))
+        {
+        }
 
-    //
-    // Display indication that the SSI is receiving data.
-    //
-    UARTprintf("\nReceived:\n  ");
+        //
+        // Display indication that the SSI is receiving data.
+        //
+        UARTprintf("\nReceived:\n  ");
 
-    //
-    // Receive 3 bytes of data.
-    //
-    for(ui32Index = 0; ui32Index < NUM_SSI_DATA; ui32Index++)
-    {
+        // Receive 1 byte of data:
         //
         // Receive the data using the "blocking" Get function. This function
         // will wait until there is data in the receive FIFO before returning.
         //
-        SSIDataGet(SSI0_BASE, &pui32DataRx[ui32Index]);
+        SSIDataGet(SSI0_BASE, &pui32DataRx[0]);
 
         //
         // Since we are using 8-bit data, mask off the MSB.
         //
-        pui32DataRx[ui32Index] &= 0x00FF;
+        pui32DataRx[0] &= 0x00FF;
 
         //
         // Display the data that SSI0 received.
         //
-        UARTprintf("'%c' ", pui32DataRx[ui32Index]);
+        UARTprintf("Angle: %d\n", pui32DataRx[0]);
+
+        SimpleDelay();
     }
 
     //
