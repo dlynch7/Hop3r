@@ -1,0 +1,53 @@
+%% %% two_mass_thermal_model.m
+%   Dan Lynch
+%   3/8/18
+%% Description
+
+%% Parameters
+tau_w = 46; % thermal time constant of motor windings (s)
+tau_h = 283; % thermal time constant of motor housing (s)
+tau_wh = mean([tau_w tau_h]); % (GUESS) thermal time constant, mixed winding/housing (s)
+
+R = 0.343; % terminal resistance (ohms)
+T_amb = 0; % ambient temperature (deg C)
+
+%% ODE
+dTdt = @(t,T,I) [-1/tau_w, 1/tau_w; 
+                1/tau_wh, -(1/tau_wh)+(1/tau_h)]*[T(1); T(2)] + [(I^2)*R; T_amb/tau_h];
+            
+%% Simulate
+sim_t = 0;
+sim_T = [T_amb T_amb];
+
+on_time = 0.05;
+off_time = 0.4 - on_time;
+while sim_t(end) < 60
+% heating:
+I = 20;
+dTdt_heating = @(t,T) dTdt(t,T,I);
+T_init = [sim_T(end,1); sim_T(end,2)]; % everything starts at ambient temperature
+timespan = [sim_t(end) sim_t(end)+on_time];
+
+[t_heating,T_heating] = ode45(dTdt_heating,timespan,T_init);
+
+% cooling:
+I = 0;
+dTdt_cooling = @(t,T) dTdt(t,T,I);
+T_init = [T_heating(end,1); T_heating(end,2)]; % everything starts at ambient temperature
+timespan = [sim_t(end)+on_time sim_t(end)+on_time+off_time];
+
+[t_cooling,T_cooling] = ode45(dTdt_cooling,timespan,T_init);
+
+t = vertcat(t_heating, t_cooling);
+T = vertcat(T_heating, T_cooling);
+
+sim_t = vertcat(sim_t, t);
+sim_T = vertcat(sim_T, T);
+
+end
+
+plot(sim_t,T_amb+sim_T(:,1),'b-',sim_t,T_amb+sim_T(:,2),'g-')
+legend('winding temp','housing temp','Location','Best')
+xlabel('time (s)')
+ylabel('Temperature (deg C)')
+hold off 
