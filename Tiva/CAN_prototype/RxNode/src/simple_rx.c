@@ -86,6 +86,14 @@
 
 //*****************************************************************************
 //
+// Global variables for echoing CAN statuses to the main function.
+//
+//*****************************************************************************
+volatile uint32_t echoCanInterruptStatus = 0;
+volatile uint32_t echoCanControllerStatus = 0;
+
+//*****************************************************************************
+//
 // A counter that keeps track of the number of times the RX interrupt has
 // occurred, which should match the number of messages that were received.
 //
@@ -167,6 +175,7 @@ CANIntHandler(void)
     // Read the CAN interrupt status to find the cause of the interrupt
     //
     ui32Status = CANIntStatus(CAN0_BASE, CAN_INT_STS_CAUSE);
+    echoCanInterruptStatus = ui32Status;
 
     //
     // If the cause is a controller status interrupt, then get the status
@@ -181,6 +190,7 @@ CANIntHandler(void)
         // The act of reading this status will clear the interrupt.
         //
         ui32Status = CANStatusGet(CAN0_BASE, CAN_STS_CONTROL);
+        echoCanControllerStatus = ui32Status;
 
         //
         // Set a flag to indicate some errors may have occurred.
@@ -276,8 +286,6 @@ main(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
-    UARTprintf("Rx node up!\n");
-
     //
     // For this example CAN0 is used with RX and TX pins on port B4 and B5.
     // The actual port and pins used may be different on your part, consult
@@ -336,7 +344,7 @@ main(void)
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000);
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
 #endif
 
     //
@@ -346,7 +354,7 @@ main(void)
     // allocation of the vector table, then you must also call CANIntRegister()
     // here.
     //
-    // CANIntRegister(CAN0_BASE, CANIntHandler); // if using dynamic vectors
+    CANIntRegister(CAN0_BASE, CANIntHandler); // if using dynamic vectors
     //
     CANIntEnable(CAN0_BASE, CAN_INT_MASTER | CAN_INT_ERROR | CAN_INT_STATUS);
 
@@ -378,6 +386,8 @@ main(void)
     //
     CANMessageSet(CAN0_BASE, 1, &sCANMessage, MSG_OBJ_TYPE_RX);
 
+    UARTprintf("Rx node up!\n");
+
     //
     // Enter loop to process received messages.  This loop just checks a flag
     // that is set by the interrupt handler, and if set it reads out the
@@ -392,13 +402,13 @@ main(void)
     for(;;)
     {
         unsigned int uIdx;
-
         //
         // If the flag is set, that means that the RX interrupt occurred and
         // there is a message ready to be read from the CAN
         //
         if(g_bRXFlag)
         {
+            // UARTprintf("after flag\n");
             //
             // Reuse the same message object that was used earlier to configure
             // the CAN for receiving messages.  A buffer for storing the
@@ -414,6 +424,8 @@ main(void)
             // the interrupt handler.
             //
             CANMessageGet(CAN0_BASE, 1, &sCANMessage, 0);
+            UARTprintf("...CAN Interrupt status: %X ...",echoCanInterruptStatus);
+            UARTprintf("CAN Controller status: %X ...",echoCanControllerStatus);
 
             //
             // Clear the pending message flag so that the interrupt handler can
