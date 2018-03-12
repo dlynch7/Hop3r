@@ -45,9 +45,9 @@ In this case, it is communicating with an AEAT-6600 magnetic encoder.
 //
 //*****************************************************************************
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include "inc/hw_memmap.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
@@ -259,7 +259,7 @@ main(void)
     //
     SSIEnable(SSI0_BASE);
 
-    float angleRad = 0;
+    float angleRad = 0.0f;
     char buffer[50];
 
     while(1) {
@@ -329,14 +329,14 @@ main(void)
         pui32DataRx[0] &= 0x3FFF; // mask to 14-bit encoder output, per AEAT-6600 datasheet
 
         // convert 14-bit encoder output to an angle in radians:
-        angleRad = ((float) 2*PI*pui32DataRx[0]/16384);
+        angleRad = ((float) 360*pui32DataRx[0]/16384.0f);
 
         //
         // Display the data that SSI0 received.
         //
-        UARTprintf("Angle (int): %d\n", pui32DataRx[0]);
-        sprintf(buffer, "Angle (float): %f\n", angleRad);
-        UARTprintf("%s",buffer);
+        UARTprintf("Angle (raw): %d\n", pui32DataRx[0]);
+        UARTprintf("Angle (degrees): %d\n", ((int) angleRad));
+        // UARTprintf("%s",buffer);
 
         SimpleDelay();
     }
