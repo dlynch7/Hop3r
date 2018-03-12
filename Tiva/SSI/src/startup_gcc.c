@@ -49,7 +49,7 @@ extern int main(void);
 // Reserve space for the system stack.
 //
 //*****************************************************************************
-static uint32_t pulStack[1024];
+static uint32_t pulStack[64]; // try 1024 if using custom buffers
 
 //*****************************************************************************
 //
