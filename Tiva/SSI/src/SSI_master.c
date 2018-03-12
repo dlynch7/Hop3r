@@ -47,6 +47,7 @@ In this case, it is communicating with an AEAT-6600 magnetic encoder.
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "inc/hw_memmap.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
@@ -93,6 +94,7 @@ In this case, it is communicating with an AEAT-6600 magnetic encoder.
 //
 //*****************************************************************************
 #define NUM_SSI_DATA            3
+#define PI 3.14159
 
 void SimpleDelay(void)
 {
@@ -194,7 +196,7 @@ main(void)
     //
     UARTprintf("SSI ->\n");
     UARTprintf("  Mode: SPI\n");
-    UARTprintf("  Data: 8-bit\n\n");
+    UARTprintf("  Data: 16-bit\n\n");
 
     //
     // The SSI0 peripheral must be enabled for use.
@@ -246,16 +248,19 @@ main(void)
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     SSIConfigSetExpClk(SSI0_BASE, ui32SysClock, SSI_FRF_MOTO_MODE_0,
-                       SSI_MODE_MASTER, 1000000, 8);
+                       SSI_MODE_MASTER, 1000000, 16); // changed to 16-bit mode, per AEAT-6600 datasheet
 #else
     SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
-                       SSI_MODE_MASTER, 1000000, 8);
+                       SSI_MODE_MASTER, 1000000, 16); // changed to 16-bit mode, per AEAT-6600 datasheet
 #endif
 
     //
     // Enable the SSI0 module.
     //
     SSIEnable(SSI0_BASE);
+
+    float angleRad = 0;
+    char buffer[50];
 
     while(1) {
         //
@@ -309,7 +314,7 @@ main(void)
         //
         // Display indication that the SSI is receiving data.
         //
-        UARTprintf("\nReceived:\n  ");
+        UARTprintf("\nReceived:\n");
 
         // Receive 1 byte of data:
         //
@@ -319,14 +324,19 @@ main(void)
         SSIDataGet(SSI0_BASE, &pui32DataRx[0]);
 
         //
-        // Since we are using 8-bit data, mask off the MSB.
+        // Since we are using 16-bit data, mask off the MSB.
         //
-        pui32DataRx[0] &= 0x00FF;
+        pui32DataRx[0] &= 0x3FFF; // mask to 14-bit encoder output, per AEAT-6600 datasheet
+
+        // convert 14-bit encoder output to an angle in radians:
+        angleRad = ((float) 2*PI*pui32DataRx[0]/16384);
 
         //
         // Display the data that SSI0 received.
         //
-        UARTprintf("Angle: %d\n", pui32DataRx[0]);
+        UARTprintf("Angle (int): %d\n", pui32DataRx[0]);
+        sprintf(buffer, "Angle (float): %f\n", angleRad);
+        UARTprintf("%s",buffer);
 
         SimpleDelay();
     }
