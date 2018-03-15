@@ -378,7 +378,7 @@ main(void)
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 5000); // 5 kHz lulz
 #endif
 
     //
@@ -431,6 +431,7 @@ main(void)
     UARTprintf("Rx node up!\n");
 
     int16_t Az = 0;
+    int16_t Fz = 0;
 
     //
     // Enter loop to process received messages.  This loop just checks a flag
@@ -481,6 +482,8 @@ main(void)
             // Print information about the message just received.
             //
             PrintCANMessageInfo(&sCANMessage, 1);
+            Az = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
+            UARTprintf("Az: %d\n",Az);
         }
 
         //
@@ -493,6 +496,8 @@ main(void)
             CANMessageGet(CAN0_BASE, 2, &sCANMessage, 0);
             g_bRXFlag2 = 0;
             PrintCANMessageInfo(&sCANMessage, 2);
+            Fz = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
+            UARTprintf("Fz: %d\n",Fz);
         }
     }
 

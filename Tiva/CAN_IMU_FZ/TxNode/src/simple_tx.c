@@ -44,6 +44,7 @@
 #include "inc/hw_i2c.h"
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
+#include "driverlib/adc.h"
 #include "driverlib/can.h"
 #include "driverlib/gpio.h"
 #include "driverlib/i2c.h"
@@ -149,6 +150,38 @@ tCANMsgObject g_sCANMsgObject2;
 //*****************************************************************************
 uint8_t g_pui8Msg1[4] = { 0, 0, 0, 0};
 uint8_t g_pui8Msg2[4] = { 0, 0, 0, 0};
+
+//*****************************************************************************
+//
+// ADC setup function
+//
+//*****************************************************************************
+void ADCenable(void) {
+  // Enable ADC0 on pin PE3
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_ADC0);
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
+  GPIOPinTypeADC(GPIO_PORTE_BASE, GPIO_PIN_3);
+  ADCSequenceConfigure(ADC0_BASE, 3, ADC_TRIGGER_PROCESSOR, 0);
+  ADCSequenceStepConfigure(ADC0_BASE, 3, 0, ADC_CTL_CH0 | ADC_CTL_IE |
+                           ADC_CTL_END);
+  ADCSequenceEnable(ADC0_BASE, 3);
+  ADCIntClear(ADC0_BASE, 3);
+}
+
+//*****************************************************************************
+//
+// ADC read function
+//
+//*****************************************************************************
+uint32_t ADCread(void) {
+  uint32_t pui32ADC0Value[1]; // FIFO, can be larger
+  ADCProcessorTrigger(ADC0_BASE, 3);
+  while(!ADCIntStatus(ADC0_BASE, 3, false)) {;}
+  ADCIntClear(ADC0_BASE, 3);
+  ADCSequenceDataGet(ADC0_BASE, 3, pui32ADC0Value);
+  // UARTprintf("AIN0 = %4d\r", pui32ADC0Value[0]);
+  return pui32ADC0Value[0];
+}
 
 //*****************************************************************************
 //
@@ -439,7 +472,7 @@ main(void)
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 5000); // 5 kHz lulz
 #endif
 
     //
@@ -484,6 +517,20 @@ main(void)
     g_sCANMsgObject2.ui32MsgLen = sizeof(g_pui8Msg2);
     g_sCANMsgObject2.pui8MsgData = g_pui8Msg2;
 
+    UARTprintf("CAN0 enabled!\n");
+
+    ADCenable();
+    uint32_t fz_adc = 0; // initialize
+
+    //
+    // Display the ADC setup on the console.
+    //
+    UARTprintf("ADC ->\n");
+    UARTprintf("  Type: Single Ended\n");
+    UARTprintf("  Samples: One\n");
+    UARTprintf("  Update Rate: 250ms\n");
+    UARTprintf("  Input Pin: AIN0/PE3\n\n");
+
 		SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
@@ -500,6 +547,11 @@ main(void)
         Az = getzXL();
         whoiam = WhoAmI();
         UARTprintf("WhoAmI: %d zXL: %d\n",whoiam, Az);
+        (*(uint32_t *)g_pui8Msg1) = Az; // get ready to send Az over CAN
+
+        fz_adc = ADCread();
+        UARTprintf("AIN0 = %4d\n", fz_adc);
+        (*(uint32_t *)g_pui8Msg2) = fz_adc; // get ready to send fz_adc over CAN
 
         // Send message 1 using CAN controller message object 1.  This is
         // the only message sent using this message object.  The
@@ -559,8 +611,8 @@ main(void)
 
         // Change the value in the message data for each of the messages.
         //
-        (*(uint32_t *)g_pui8Msg1)++;
-        (*(uint32_t *)g_pui8Msg2)++;
+        // (*(uint32_t *)g_pui8Msg1)++;
+        // (*(uint32_t *)g_pui8Msg2)++;
     }
 
     //
