@@ -1543,6 +1543,9 @@ main(void)
             UARTprintf(" total count = %u\n", g_ui32Msg1Count + g_ui32Msg2Count);
         }
         i++; // increment loop counter
+        if (i==1000) {
+          i = 0; // rollover
+        }
     }
 
     //
