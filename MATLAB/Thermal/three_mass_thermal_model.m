@@ -50,16 +50,67 @@ dTdt = @(t,T) [-1/(mw*cw*Rtwh), 1/(mw*cw*Rtwh), 0;
                 *[T(1); T(2); T(3)]...
                 + [(I^2)*R/(cw*mw); 0; ((hAL*AAL)/(mAL*cAL))*Tamb];
             
-%% Simulate
-T_init = [Tamb; Tamb; Tamb];
-timespan = [0 120];
+%% Simulate, for steady-state current draw:
+T_init = [20; 20; 20];
+timespan = [0 180];
 [t,T] = ode45(dTdt,timespan,T_init);
 
 %% Plot simulation result:
 figure
-plot(t,Tamb+T(:,1),'b-',t,Tamb+T(:,2),'g-',t,Tamb+T(:,3),'r-')
+plot(t,T(:,1),'b-',t,T(:,2),'g-',t,T(:,3),'r-')
 hold on
-line([0 t(end)],[Tw_max-Tamb Tw_max-Tamb],'Color','black')
+line([0 t(end)],[Tw_max Tw_max],'Color','black')
+legend('winding temp','housing temp','plate temp','Location','Best')
+xlabel('time (s)')
+ylabel('Temperature (deg C)')
+hold off 
+
+%% Simulate, for current needed to jump:
+torqueJump = 4.6;
+
+sim_t = 0;
+sim_T = [0 0 0];
+
+on_time = 0.1;
+off_time = 0.4 - on_time;
+while sim_t(end) < 180
+% heating:
+I = torqueJump*kv;
+dTdt = @(t,T) [-1/(mw*cw*Rtwh), 1/(mw*cw*Rtwh), 0; 
+                1/(mh*ch*Rtwh), -1/(mh*ch*Rtwh) - 1/(mh*ch*Rtha), 1/(mh*ch*Rtha);
+                0, 1/(mAL*cAL*Rtha), -1/(mAL*cAL*Rtha) - (hAL*AAL)/(mAL*cAL)]...
+                *[T(1); T(2); T(3)]...
+                + [(I^2)*R/(cw*mw); 0; ((hAL*AAL)/(mAL*cAL))*Tamb];
+dTdt_heating = @(t,T) dTdt(t,T);
+T_init = [sim_T(end,1); sim_T(end,2); sim_T(end,3)]; % everything starts at ambient temperature
+timespan = [sim_t(end) sim_t(end)+on_time];
+
+[t_heating,T_heating] = ode45(dTdt_heating,timespan,T_init);
+
+% cooling:
+I = 0;
+dTdt = @(t,T) [-1/(mw*cw*Rtwh), 1/(mw*cw*Rtwh), 0; 
+                1/(mh*ch*Rtwh), -1/(mh*ch*Rtwh) - 1/(mh*ch*Rtha), 1/(mh*ch*Rtha);
+                0, 1/(mAL*cAL*Rtha), -1/(mAL*cAL*Rtha) - (hAL*AAL)/(mAL*cAL)]...
+                *[T(1); T(2); T(3)]...
+                + [(I^2)*R/(cw*mw); 0; ((hAL*AAL)/(mAL*cAL))*Tamb];
+dTdt_cooling = @(t,T) dTdt(t,T);
+T_init = [T_heating(end,1); T_heating(end,2); T_heating(end,3)]; % everything starts at ambient temperature
+timespan = [sim_t(end)+on_time sim_t(end)+on_time+off_time];
+
+[t_cooling,T_cooling] = ode45(dTdt_cooling,timespan,T_init);
+
+t = vertcat(t_heating, t_cooling);
+T = vertcat(T_heating, T_cooling);
+
+sim_t = vertcat(sim_t, t);
+sim_T = vertcat(sim_T, T);
+
+end
+figure
+
+plot(sim_t,sim_T(:,1),'b-',sim_t,sim_T(:,2),'g-',sim_t,sim_T(:,3),'r-')
+line([0 sim_t(end)],[Tw_max Tw_max],'Color','black')
 legend('winding temp','housing temp','plate temp','Location','Best')
 xlabel('time (s)')
 ylabel('Temperature (deg C)')
