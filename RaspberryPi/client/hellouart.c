@@ -15,9 +15,11 @@ int main (void) {
 	int count;
 	uint16_t len = 256;
 	unsigned int nextTime;
+	uint8_t writePermission = 0;
+	uint16_t periodms = 1;
 
-	char msg[10] = {};
-	
+	char writemsg[10] = {};
+
 	if ((serial_port = serialOpen("/dev/ttyS0", 115200)) < 0) // open serial port
 	{
 		fprintf(stderr, "Unable to open serial device: %s\n", strerror(errno));
@@ -28,26 +30,35 @@ int main (void) {
 		fprintf(stdout, "Unable to start wiringPi: %s\n", strerror(errno));
 		return 1;
 	}
-	sprintf(msg,"%d\r\n",len);	
-	serialPuts(serial_port, msg);
+	sprintf(writemsg,"%d\r\n",len);
+	serialPuts(serial_port, writemsg);
 
-	nextTime = millis() + 300;
+	writePermission = serialGetchar(serial_port);
+	printf("writePermission: %c\r\n",writePermission);
 
-	for (count = 0; count < len;) {
-		if (millis() > nextTime) {
-			printf("\nOut: %3d: ", count);
-			fflush(stdout);
-			sprintf(msg,"%d\r\n",count);
-			serialPuts(serial_port, msg);
-			nextTime += 300;
-			++count;
-		}
+	if (writePermission != '1') {
+		printf("Write permission denied by client.\r\n");
+		return 1;
+	}
 
-		delay(3);
-		
-		while(serialDataAvail(serial_port)) {
-			printf(" -> %3d", serialGetchar(serial_port));
-			fflush(stdout);
+	if (writePermission=='1') {
+		nextTime = millis() + periodms;
+		for (count = 0; count < len;) {
+			if (millis() > nextTime) {
+				printf("\nOut: %3d: ", count);
+				fflush(stdout);
+				sprintf(writemsg,"%d\r\n",count);
+				serialPuts(serial_port, writemsg);
+				nextTime += periodms;
+				++count;
+			}
+
+			delay(3);
+
+			while(serialDataAvail(serial_port)) {
+				printf(" -> %3d", serialGetchar(serial_port));
+				fflush(stdout);
+			}
 		}
 	}
 	printf("\n");
