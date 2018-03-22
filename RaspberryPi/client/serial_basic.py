@@ -1,7 +1,8 @@
 import serial
 import time
 
-timeout = 5;
+timeout = 5
+timeoutOccurred = 0
 
 ser = serial.Serial(port='/dev/ttyUSB0',baudrate=115200,timeout=timeout) # open serial port
 print(ser.name)                     # check which port was really opened
@@ -16,6 +17,8 @@ if deltat < timeout:
     get = [0]*NSAMPLES # create array to store received data
     received = 0;
 
+    ser.write('1'); # '1' gives the other device permission to write
+
     for i in range(NSAMPLES):
         now = time.time()
 
@@ -27,12 +30,22 @@ if deltat < timeout:
 
         if deltat < timeout:
             received += 1
+        else:
+            timeoutOccurred = 1
+            print "Breaking out of read loop..."
+            break
 
-    print received
-    if received < NSAMPLES:
+    if timeoutOccurred:
         print "Serial read timeout occurred. Expected %d samples, received %d samples." % (NSAMPLES, received)
+    else:
+        if received < NSAMPLES:
+            print "Serial read complete, but number of received samples does not match expected number of samples."
+            print "Expected %d samples, received %d samples." % (NSAMPLES, received)
+        else:
+            print "Serial read complete. Expected %d samples, received %d samples." % (NSAMPLES, received)
 
 else:
+    timeoutOccurred = 1
     print "Serial read timeout occurred before the number of samples was sent. Check connection."
 
 
