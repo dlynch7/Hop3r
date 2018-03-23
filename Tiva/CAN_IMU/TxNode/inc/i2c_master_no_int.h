@@ -1,4 +1,4 @@
-#if defined __I2C_MASTER_NO_INT__H__
+#ifndef __I2C_MASTER_NO_INT__H__
 #define __I2C_MASTER_NO_INT__H__
 // Header file for i2c_master_no_int.c
 // helps implement I2C as a master w/o interrupts
