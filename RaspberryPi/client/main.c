@@ -81,6 +81,7 @@
 
 #include "linux-can-utils/lib.h"
 #include "circ_buffer.h"
+#include "per_threads.h"
 
 #define CAN_PERIOD_US 5000
 #define UART_PERIOD_US 50000
@@ -88,83 +89,83 @@
 void *CAN_thread();
 void *UART_thread();
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
-uint8_t begin; // read and write threads must wait for begin = 1
+uint8_t CAN_thread_begin; // read and write threads must wait for begin = 1
+uint8_t UART_thread_begin; // read and write threads must wait for begin = 1
 int serial_port;
-uint16_t periodms_write = 5; // 1 = 1 kHz, 1000 = 1 Hz
-uint16_t periodms_read = 50; // 1 = 1 kHz, 1000 = 1 Hz
 char writemsg[10] = {};
 
-struct periodic_info {
-	int sig;
-	sigset_t alarm_sig;
-};
-
-static int make_periodic(int unsigned period, struct periodic_info *info)
-{
-	static int next_sig;
-	int ret;
-	unsigned int ns;
-	unsigned int sec;
-	struct sigevent sigev;
-	timer_t timer_id;
-	struct itimerspec itval;
-
-	/* Initialise next_sig first time through. We can't use static
-	   initialisation because SIGRTMIN is a function call, not a constant */
-	if (next_sig == 0)
-		next_sig = SIGRTMIN;
-	/* Check that we have not run out of signals */
-	if (next_sig > SIGRTMAX)
-		return -1;
-	info->sig = next_sig;
-	next_sig++;
-	/* Create the signal mask that will be used in wait_period */
-	sigemptyset(&(info->alarm_sig));
-	sigaddset(&(info->alarm_sig), info->sig);
-
-	/* Create a timer that will generate the signal we have chosen */
-	sigev.sigev_notify = SIGEV_SIGNAL;
-	sigev.sigev_signo = info->sig;
-	sigev.sigev_value.sival_ptr = (void *)&timer_id;
-	ret = timer_create(CLOCK_MONOTONIC, &sigev, &timer_id);
-	if (ret == -1)
-		return ret;
-
-	/* Make the timer periodic */
-	sec = period / 1000000;
-	ns = (period - (sec * 1000000)) * 1000;
-	itval.it_interval.tv_sec = sec;
-	itval.it_interval.tv_nsec = ns;
-	itval.it_value.tv_sec = sec;
-	itval.it_value.tv_nsec = ns;
-	ret = timer_settime(timer_id, 0, &itval, NULL);
-	return ret;
-}
-
-static void wait_period(struct periodic_info *info)
-{
-	int sig;
-	sigwait(&(info->alarm_sig), &sig);
-}
+// static int make_periodic(int unsigned period, struct periodic_info *info)
+// {
+// 	static int next_sig;
+// 	int ret;
+// 	unsigned int ns;
+// 	unsigned int sec;
+// 	struct sigevent sigev;
+// 	timer_t timer_id;
+// 	struct itimerspec itval;
+//
+// 	/* Initialise next_sig first time through. We can't use static
+// 	   initialisation because SIGRTMIN is a function call, not a constant */
+// 	if (next_sig == 0)
+// 		next_sig = SIGRTMIN;
+// 	/* Check that we have not run out of signals */
+// 	if (next_sig > SIGRTMAX)
+// 		return -1;
+// 	info->sig = next_sig;
+// 	next_sig++;
+// 	/* Create the signal mask that will be used in wait_period */
+// 	sigemptyset(&(info->alarm_sig));
+// 	sigaddset(&(info->alarm_sig), info->sig);
+//
+// 	/* Create a timer that will generate the signal we have chosen */
+// 	sigev.sigev_notify = SIGEV_SIGNAL;
+// 	sigev.sigev_signo = info->sig;
+// 	sigev.sigev_value.sival_ptr = (void *)&timer_id;
+// 	ret = timer_create(CLOCK_MONOTONIC, &sigev, &timer_id);
+// 	if (ret == -1)
+// 		return ret;
+//
+// 	/* Make the timer periodic */
+// 	sec = period / 1000000;
+// 	ns = (period - (sec * 1000000)) * 1000;
+// 	itval.it_interval.tv_sec = sec;
+// 	itval.it_interval.tv_nsec = ns;
+// 	itval.it_value.tv_sec = sec;
+// 	itval.it_value.tv_nsec = ns;
+// 	ret = timer_settime(timer_id, 0, &itval, NULL);
+// 	return ret;
+// }
+//
+// static void wait_period(struct periodic_info *info)
+// {
+// 	int sig;
+// 	sigwait(&(info->alarm_sig), &sig);
+// }
 
 int main(void) {
   int rc1, rc2;
   uint8_t writePermission = 0;
-  sigset_t alarm_sig;
-	int i;
 
-	printf("Periodic threads using POSIX timers\n");
+  if (setup_periodic()) {
+    fprintf(stderr, "Failed to setup periodic threads.\n");
+    return 1;
+  }
+  // sigset_t alarm_sig;
+	// int i;
+  //
+	// printf("Periodic threads using POSIX timers\n");
+  //
+	// /* Block all real time signals so they can be used for the timers.
+	//    Note: this has to be done in main() before any threads are created
+	//    so they all inherit the same mask. Doing it later is subject to
+	//    race conditions */
+	// sigemptyset(&alarm_sig);
+	// for (i = SIGRTMIN; i <= SIGRTMAX; i++)
+	// 	sigaddset(&alarm_sig, i);
+	// sigprocmask(SIG_BLOCK, &alarm_sig, NULL);
 
-	/* Block all real time signals so they can be used for the timers.
-	   Note: this has to be done in main() before any threads are created
-	   so they all inherit the same mask. Doing it later is subject to
-	   race conditions */
-	sigemptyset(&alarm_sig);
-	for (i = SIGRTMIN; i <= SIGRTMAX; i++)
-		sigaddset(&alarm_sig, i);
-	sigprocmask(SIG_BLOCK, &alarm_sig, NULL);
-
-  begin = 0; // reading and writing cannot commence
+  CAN_thread_begin = 0; // reading and writing cannot commence
+  UART_thread_begin = 0; // reading and writing cannot commence
 
   printf("This is the main function.\n");
 
@@ -217,7 +218,9 @@ int main(void) {
 	}
 
   printf("From main process ID: %d\n", ((int)getpid()));
-  begin = 1; // reading and writing can commence
+  CAN_thread_begin = 1; // reading and writing can commence
+  // some kind of delay here?
+  UART_thread_begin = 1; // reading and writing can commence
 
   /****************************************************************************
   *	Wait until threads are complete before main continues. Unless we
@@ -313,14 +316,14 @@ void *CAN_thread() {
   // if you don't have access to the CAN bus, comment out up to the line above.
   // Make sure both mutex lock and unlock are either both commented out or
   // neither commented out.
+  pthread_mutex_unlock(&mutex1);
 
   /****************************************************************************
   * Wait for permission to begin,
   * then send/receive via CAN and put relevant data into circular buffer.
   ****************************************************************************/
 
-  while(!begin) {;}
-  pthread_mutex_unlock(&mutex1);
+  while(!CAN_thread_begin) {;}
   make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
   // nextWriteTime = millis() + periodms_write;
   for (k = 0; k < BUFLEN;) {
@@ -369,7 +372,7 @@ void *UART_thread() {
   * then get relevant data from circular buffer and send via UART
   ****************************************************************************/
 
-  while(!begin) {;}
+  while(!UART_thread_begin) {;}
   // nextReadTime = millis() + periodms_read;
   make_periodic(UART_PERIOD_US, &info); // period (1st argument) in microseconds
   for (j = 0; j < BUFLEN;) {
