@@ -5,6 +5,11 @@
 * 3-27-2018
 */
 
+/******************************************************************************
+* Periodic threading code from http://2net.co.uk/tutorial/periodic_threads
+* Added 3-28-2018
+******************************************************************************/
+
 /*
  *  $Id$
  */
@@ -62,6 +67,7 @@
 #include <linux/can/raw.h>
 #include <net/if.h>
 #include <pthread.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -76,18 +82,87 @@
 #include "linux-can-utils/lib.h"
 #include "circ_buffer.h"
 
+#define CAN_PERIOD_US 5000
+#define UART_PERIOD_US 50000
+
 void *CAN_thread();
 void *UART_thread();
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 uint8_t begin; // read and write threads must wait for begin = 1
 int serial_port;
-uint16_t periodms_write = 1; // 1 = 1 kHz, 1000 = 1 Hz
-uint16_t periodms_read = 10; // 1 = 1 kHz, 1000 = 1 Hz
+uint16_t periodms_write = 5; // 1 = 1 kHz, 1000 = 1 Hz
+uint16_t periodms_read = 50; // 1 = 1 kHz, 1000 = 1 Hz
 char writemsg[10] = {};
 
-uint8_t main(void) {
+struct periodic_info {
+	int sig;
+	sigset_t alarm_sig;
+};
+
+static int make_periodic(int unsigned period, struct periodic_info *info)
+{
+	static int next_sig;
+	int ret;
+	unsigned int ns;
+	unsigned int sec;
+	struct sigevent sigev;
+	timer_t timer_id;
+	struct itimerspec itval;
+
+	/* Initialise next_sig first time through. We can't use static
+	   initialisation because SIGRTMIN is a function call, not a constant */
+	if (next_sig == 0)
+		next_sig = SIGRTMIN;
+	/* Check that we have not run out of signals */
+	if (next_sig > SIGRTMAX)
+		return -1;
+	info->sig = next_sig;
+	next_sig++;
+	/* Create the signal mask that will be used in wait_period */
+	sigemptyset(&(info->alarm_sig));
+	sigaddset(&(info->alarm_sig), info->sig);
+
+	/* Create a timer that will generate the signal we have chosen */
+	sigev.sigev_notify = SIGEV_SIGNAL;
+	sigev.sigev_signo = info->sig;
+	sigev.sigev_value.sival_ptr = (void *)&timer_id;
+	ret = timer_create(CLOCK_MONOTONIC, &sigev, &timer_id);
+	if (ret == -1)
+		return ret;
+
+	/* Make the timer periodic */
+	sec = period / 1000000;
+	ns = (period - (sec * 1000000)) * 1000;
+	itval.it_interval.tv_sec = sec;
+	itval.it_interval.tv_nsec = ns;
+	itval.it_value.tv_sec = sec;
+	itval.it_value.tv_nsec = ns;
+	ret = timer_settime(timer_id, 0, &itval, NULL);
+	return ret;
+}
+
+static void wait_period(struct periodic_info *info)
+{
+	int sig;
+	sigwait(&(info->alarm_sig), &sig);
+}
+
+int main(void) {
   int rc1, rc2;
   uint8_t writePermission = 0;
+  sigset_t alarm_sig;
+	int i;
+
+	printf("Periodic threads using POSIX timers\n");
+
+	/* Block all real time signals so they can be used for the timers.
+	   Note: this has to be done in main() before any threads are created
+	   so they all inherit the same mask. Doing it later is subject to
+	   race conditions */
+	sigemptyset(&alarm_sig);
+	for (i = SIGRTMIN; i <= SIGRTMAX; i++)
+		sigaddset(&alarm_sig, i);
+	sigprocmask(SIG_BLOCK, &alarm_sig, NULL);
 
   begin = 0; // reading and writing cannot commence
 
@@ -163,35 +238,44 @@ uint8_t main(void) {
 }
 
 void *CAN_thread() {
-  uint16_t i;
-  unsigned int nextWriteTime;
+  uint16_t k;
+  // unsigned int nextWriteTime;
 
-  /****************************************************************************
-  * Set up CAN raw socket
-  ****************************************************************************/
-  // if you don't have access to the CAN bus, comment out from the next line:
-  pthread_mutex_lock(&mutex1);
   int s; // can raw socket
   int nbytes;
   struct sockaddr_can addr;
   struct can_frame frame;
   struct ifreq ifr;
 
+  struct periodic_info info;
+
+  /****************************************************************************
+  * Set up CAN raw socket
+  ****************************************************************************/
+  // if you don't have access to the CAN bus, comment out from the next line:
+  pthread_mutex_lock(&mutex1);
+
+  printf("Beginning CAN socket setup:\n");
+
   /* open socket */
 	if ((s = socket(PF_CAN, SOCK_RAW, CAN_RAW)) < 0) {
-		perror("socket");
+		perror("\tsocket");
+    printf("\tsocket error\n");
     // TO-DO: ERROR HANDLING
     // return 1;
 	}
+  printf("\tsocket open complete\n");
 
   addr.can_family = AF_CAN;
 
 	strcpy(ifr.ifr_name, "can0");
 	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
-		perror("SIOCGIFINDEX");
+		perror("\tSIOCGIFINDEX");
+    printf("\tSIOCGIFINDEX\n");
     // TO-DO: ERROR HANDLING
     // return 1;
 	}
+  printf("\tioctl complete\n");
 	addr.can_ifindex = ifr.ifr_ifindex;
 
   /* disable default receive filter on this RAW socket */
@@ -201,13 +285,31 @@ void *CAN_thread() {
 	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
-		perror("bind");
+		perror("\tbind");
+    printf("\tbind error\n");
     // TO-DO: ERROR HANDLING
 		// return 1;
 	}
+  printf("\tbind complete\n");
 
-  printf("CAN socket set up successfully!\n");
-  pthread_mutex_unlock(&mutex1);
+  printf("\tsocket: %d\n",s);
+  printf("\tsizeof(frame): %d\n",sizeof(frame));
+
+  printf("CAN socket set up complete!\n");
+
+  /* parse bogus CAN frame */
+  // char data[]
+	if (parse_canframe("000#00000000", &frame)){
+		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
+		fprintf(stderr, "Try: <can_id>#{R|data}\n");
+		fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
+		fprintf(stderr, "data has 0 to 8 hex-values that can (optionally)");
+		fprintf(stderr, " be seperated by '.'\n\n");
+		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / ");
+		fprintf(stderr, "5AA# /\n     1F334455#1122334455667788 / 123#R ");
+		fprintf(stderr, "for remote transmission request.\n\n");
+		// return 1;
+	}
   // if you don't have access to the CAN bus, comment out up to the line above.
   // Make sure both mutex lock and unlock are either both commented out or
   // neither commented out.
@@ -218,25 +320,49 @@ void *CAN_thread() {
   ****************************************************************************/
 
   while(!begin) {;}
-  nextWriteTime = millis() + periodms_write;
-  for (i = 0; i < BUFLEN;) {
-    if (millis() > nextWriteTime) {
+  pthread_mutex_unlock(&mutex1);
+  make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
+  // nextWriteTime = millis() + periodms_write;
+  for (k = 0; k < BUFLEN;) {
+    // if (millis() > nextWriteTime) {
+      // read from the CAN bus:
+      // printf("next line: read CAN socket\n");
+      /* send frame */
+      frame.data[0] = (k & 0x00FF);
+      frame.data[1] = (k & 0x0F00) >> 8;
       pthread_mutex_lock(&mutex1);
-      buffer_write(i);
-      printf("Wrote %d to data_buf[%d]: read = %d\twrite = %d\tempty = %d\tfull = %d\n",\
-      i,get_write_index()-1,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
-      nextWriteTime += periodms_write;
-      ++i;
+    	if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
+    		perror("write");
+        printf("write error: nbytes = %d\n",nbytes);
+    		// return 1;
+    	}
+      /* get interface name of the received CAN frame */
+      ifr.ifr_ifindex = addr.can_ifindex;
+      ioctl(s, SIOCGIFNAME, &ifr);
+      printf("Received a CAN frame from interface %s\n", ifr.ifr_name);
       pthread_mutex_unlock(&mutex1);
-    }
+      // put stuff in the circular buffer:
+      pthread_mutex_lock(&mutex1);
+      buffer_write(k);
+      printf("Wrote %d to data_buf[%d]: read = %d\twrite = %d\tempty = %d\tfull = %d\n",\
+      k,get_write_index()-1,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
+      // nextWriteTime += periodms_write;
+      ++k;
+      pthread_mutex_unlock(&mutex1);
+    // }
+    wait_period(&info);
   }
+  close(s); // close the CAN socket
   printf("Write thread has completed.\n");
+
+  return NULL;
 }
 
 void *UART_thread() {
   uint16_t j;
   uint16_t bufferval;
-  unsigned int nextReadTime;
+  // unsigned int nextReadTime;
+  struct periodic_info info;
 
   /****************************************************************************
   * Wait for permission to begin,
@@ -244,21 +370,24 @@ void *UART_thread() {
   ****************************************************************************/
 
   while(!begin) {;}
-  nextReadTime = millis() + periodms_read;
+  // nextReadTime = millis() + periodms_read;
+  make_periodic(UART_PERIOD_US, &info); // period (1st argument) in microseconds
   for (j = 0; j < BUFLEN;) {
-    if (millis() > nextReadTime) {
+    // if (millis() > nextReadTime) {
       pthread_mutex_lock(&mutex1);
-      bufferval = buffer_read();
-      printf("data_buf[%d] = %d\tread = %d\twrite = %d\tempty = %d\tfull = %d\n",\
-      j,bufferval,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
+      // if (get_write_index() >= get_read_index()) {
+        bufferval = buffer_read();
+        printf("data_buf[%d] = %d\tread = %d\twrite = %d\tempty = %d\tfull = %d\n",\
+        j,bufferval,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
 
-      fflush(stdout);
-      sprintf(writemsg,"%d\r\n",bufferval);
-      serialPuts(serial_port, writemsg);
-      nextReadTime += periodms_read;
-      ++j;
+        fflush(stdout);
+        sprintf(writemsg,"%d\r\n",bufferval);
+        serialPuts(serial_port, writemsg);
+        // nextReadTime += periodms_read;
+        ++j;
+      // }
       pthread_mutex_unlock(&mutex1);
-    }
+    // }
 
     // delay(3);
 
@@ -266,6 +395,9 @@ void *UART_thread() {
     //   printf(" -> %3d", serialGetchar(serial_port));
     //   fflush(stdout);
     // }
+    wait_period(&info);
   }
   printf("Read thread has completed.\n");
+
+  return NULL;
 }
