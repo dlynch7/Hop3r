@@ -42,7 +42,20 @@ If all goes well, you should see a lot of numbers go scrolling down each window.
 
 ### Circular buffers and asynchronous tasks
 
-The circular buffer is basically just a fixed-length array. Data is written to the buffer at the _write index_, and data is read out from the buffer at the _read index_.
+The circular buffer is basically just a fixed-length array. Data is written to the buffer at the _write index_, and data is read out from the buffer at the _read index_. The buffer is _circular_ because each index wraps around. Two blocks of code achieve this:
+```c
+// read index wraparound
+if(read >= BUFLEN) {
+  read = 0;
+}
+```
+
+```c
+// read index wraparound
+if(write >= BUFLEN) {
+  write = 0;
+}
+```
 
 The circular buffer is a useful data structure for asynchronous reads and writes. Asynchrony is in turn useful for avoiding bottlenecks. The two threads in `main.c` are examples of asynchronous tasks. One thread, `CAN_thread`, puts data into the circular buffer (and does other things too), and the other thread, `UART_thread`, reads data from the circular buffer and sends it to the client PC via a UART.
 
