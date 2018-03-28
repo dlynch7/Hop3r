@@ -1,21 +1,13 @@
 /*
-* CAN interface adapted from cantest.c, from www.skpang.co.uk
-* Multithreading by yours truly.
+* CAN interface adapted from cantest.c and candump.c, from www.skpang.co.uk
 * Dan Lynch
 * 3-27-2018
-*/
-
-/******************************************************************************
+*
 * Periodic threading code from http://2net.co.uk/tutorial/periodic_threads
 * Added 3-28-2018
 ******************************************************************************/
 
 /*
- *  $Id$
- */
-
-/*
- * cansend.c - simple command line tool to send CAN-frames via CAN_RAW sockets
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
@@ -56,11 +48,6 @@
  * Send feedback to <linux-can@vger.kernel.org>
  *
  */
-
-/* 20-05-15 Modified to sent a message out in code rather then from parameter.
-
-	www.skpang.co.uk
-*/
 
 #include <errno.h>
 #include <linux/can.h>
