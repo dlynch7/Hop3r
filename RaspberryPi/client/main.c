@@ -81,54 +81,6 @@ uint8_t UART_thread_begin; // read and write threads must wait for begin = 1
 int serial_port;
 char writemsg[10] = {};
 
-// static int make_periodic(int unsigned period, struct periodic_info *info)
-// {
-// 	static int next_sig;
-// 	int ret;
-// 	unsigned int ns;
-// 	unsigned int sec;
-// 	struct sigevent sigev;
-// 	timer_t timer_id;
-// 	struct itimerspec itval;
-//
-// 	/* Initialise next_sig first time through. We can't use static
-// 	   initialisation because SIGRTMIN is a function call, not a constant */
-// 	if (next_sig == 0)
-// 		next_sig = SIGRTMIN;
-// 	/* Check that we have not run out of signals */
-// 	if (next_sig > SIGRTMAX)
-// 		return -1;
-// 	info->sig = next_sig;
-// 	next_sig++;
-// 	/* Create the signal mask that will be used in wait_period */
-// 	sigemptyset(&(info->alarm_sig));
-// 	sigaddset(&(info->alarm_sig), info->sig);
-//
-// 	/* Create a timer that will generate the signal we have chosen */
-// 	sigev.sigev_notify = SIGEV_SIGNAL;
-// 	sigev.sigev_signo = info->sig;
-// 	sigev.sigev_value.sival_ptr = (void *)&timer_id;
-// 	ret = timer_create(CLOCK_MONOTONIC, &sigev, &timer_id);
-// 	if (ret == -1)
-// 		return ret;
-//
-// 	/* Make the timer periodic */
-// 	sec = period / 1000000;
-// 	ns = (period - (sec * 1000000)) * 1000;
-// 	itval.it_interval.tv_sec = sec;
-// 	itval.it_interval.tv_nsec = ns;
-// 	itval.it_value.tv_sec = sec;
-// 	itval.it_value.tv_nsec = ns;
-// 	ret = timer_settime(timer_id, 0, &itval, NULL);
-// 	return ret;
-// }
-//
-// static void wait_period(struct periodic_info *info)
-// {
-// 	int sig;
-// 	sigwait(&(info->alarm_sig), &sig);
-// }
-
 int main(void) {
   int rc1, rc2;
   uint8_t writePermission = 0;
@@ -137,19 +89,6 @@ int main(void) {
     fprintf(stderr, "Failed to setup periodic threads.\n");
     return 1;
   }
-  // sigset_t alarm_sig;
-	// int i;
-  //
-	// printf("Periodic threads using POSIX timers\n");
-  //
-	// /* Block all real time signals so they can be used for the timers.
-	//    Note: this has to be done in main() before any threads are created
-	//    so they all inherit the same mask. Doing it later is subject to
-	//    race conditions */
-	// sigemptyset(&alarm_sig);
-	// for (i = SIGRTMIN; i <= SIGRTMAX; i++)
-	// 	sigaddset(&alarm_sig, i);
-	// sigprocmask(SIG_BLOCK, &alarm_sig, NULL);
 
   CAN_thread_begin = 0; // reading and writing cannot commence
   UART_thread_begin = 0; // reading and writing cannot commence
@@ -185,17 +124,6 @@ int main(void) {
   * CAN_thread will write to a buffer.
   * UART_thread will read from the buffer.
 	****************************************************************************/
-
-  // // initialized with default attributes:
-  // ret = pthread_attr_getschedparam (&tattr, &param);
-  // // safe to get existing cheduling param:
-  // ret = pthread_attr_getschedparam (&tattr, &param);
-  // // set the priority; others are unchanged:
-  // param.sched_priority = newprio;
-  // // setting the new scheduling param:
-  // ret = pthread_attr_setschedparam (&tattr, &param);
-
-
 	pthread_t thread1, thread2;
   if ( (rc1=pthread_create(&thread1,NULL,&CAN_thread,NULL)) ) {
 		printf("Thread creation failed: %d\n", rc1);
@@ -315,9 +243,7 @@ void *CAN_thread() {
   // nextWriteTime = millis() + periodms_write;
   for (k = 0; k < BUFLEN;) {
     // if (millis() > nextWriteTime) {
-      // read from the CAN bus:
-      // printf("next line: read CAN socket\n");
-      /* send frame */
+      // read/write from/to the CAN bus:
       frame.data[0] = (k & 0x00FF);
       frame.data[1] = (k & 0x0F00) >> 8;
       pthread_mutex_lock(&mutex1);
@@ -351,7 +277,6 @@ void *CAN_thread() {
 void *UART_thread() {
   uint16_t j;
   uint16_t bufferval;
-  // unsigned int nextReadTime;
   struct periodic_info info;
 
   /****************************************************************************
@@ -360,12 +285,9 @@ void *UART_thread() {
   ****************************************************************************/
 
   while(!UART_thread_begin) {;}
-  // nextReadTime = millis() + periodms_read;
   make_periodic(UART_PERIOD_US, &info); // period (1st argument) in microseconds
   for (j = 0; j < BUFLEN;) {
-    // if (millis() > nextReadTime) {
       pthread_mutex_lock(&mutex1);
-      // if (get_write_index() >= get_read_index()) {
         bufferval = buffer_read();
         printf("data_buf[%d] = %d\tread = %d\twrite = %d\tempty = %d\tfull = %d\n",\
         j,bufferval,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
@@ -373,11 +295,8 @@ void *UART_thread() {
         fflush(stdout);
         sprintf(writemsg,"%d\r\n",bufferval);
         serialPuts(serial_port, writemsg);
-        // nextReadTime += periodms_read;
         ++j;
-      // }
       pthread_mutex_unlock(&mutex1);
-    // }
 
     // delay(3);
 
