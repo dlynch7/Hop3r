@@ -70,7 +70,7 @@
 #include "circ_buffer.h"
 #include "per_threads.h"
 
-#define CAN_PERIOD_US 5000
+#define CAN_PERIOD_US 2000
 #define UART_PERIOD_US 50000
 
 void *CAN_thread();
@@ -78,12 +78,16 @@ void *UART_thread();
 pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 uint8_t CAN_thread_begin; // read and write threads must wait for begin = 1
 uint8_t UART_thread_begin; // read and write threads must wait for begin = 1
+// uint8_t RunProgram; // global flag, set in main and in each thread
 int serial_port;
 char writemsg[10] = {};
 
 int main(void) {
   int rc1, rc2;
   uint8_t writePermission = 0;
+  int startwait;
+
+  // RunProgram = 0;
 
   if (setup_periodic()) {
     fprintf(stderr, "Failed to setup periodic threads.\n");
@@ -134,8 +138,14 @@ int main(void) {
 
   printf("From main process ID: %d\n", ((int)getpid()));
   CAN_thread_begin = 1; // reading and writing can commence
-  // some kind of delay here?
+  startwait = millis();
+  while ((millis() - startwait) < 100); // delay
   UART_thread_begin = 1; // reading and writing can commence
+  // RunProgram = 1;
+
+  /****************************************************************************
+  * Main loop
+  ****************************************************************************/
 
   /****************************************************************************
   *	Wait until threads are complete before main continues. Unless we
@@ -180,7 +190,7 @@ void *CAN_thread() {
 		perror("\tsocket");
     printf("\tsocket error\n");
     // TO-DO: ERROR HANDLING
-    // return 1;
+    return NULL;
 	}
   printf("\tsocket open complete\n");
 
@@ -191,7 +201,7 @@ void *CAN_thread() {
 		perror("\tSIOCGIFINDEX");
     printf("\tSIOCGIFINDEX\n");
     // TO-DO: ERROR HANDLING
-    // return 1;
+    return NULL;
 	}
   printf("\tioctl complete\n");
 	addr.can_ifindex = ifr.ifr_ifindex;
@@ -206,7 +216,7 @@ void *CAN_thread() {
 		perror("\tbind");
     printf("\tbind error\n");
     // TO-DO: ERROR HANDLING
-		// return 1;
+		return NULL;
 	}
   printf("\tbind complete\n");
 
@@ -216,8 +226,7 @@ void *CAN_thread() {
   printf("CAN socket set up complete!\n");
 
   /* parse bogus CAN frame */
-  // char data[]
-	if (parse_canframe("000#00000000", &frame)){
+	if (parse_canframe("00003001#00000000", &frame)){
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		fprintf(stderr, "Try: <can_id>#{R|data}\n");
 		fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
@@ -226,7 +235,7 @@ void *CAN_thread() {
 		fprintf(stderr, "e.g. 5A1#11.2233.44556677.88 / 123#DEADBEEF / ");
 		fprintf(stderr, "5AA# /\n     1F334455#1122334455667788 / 123#R ");
 		fprintf(stderr, "for remote transmission request.\n\n");
-		// return 1;
+		return NULL;
 	}
   // if you don't have access to the CAN bus, comment out up to the line above.
   // Make sure both mutex lock and unlock are either both commented out or
@@ -240,37 +249,33 @@ void *CAN_thread() {
 
   while(!CAN_thread_begin) {;}
   make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
-  // nextWriteTime = millis() + periodms_write;
   for (k = 0; k < BUFLEN;) {
-    // if (millis() > nextWriteTime) {
-      // read/write from/to the CAN bus:
-      frame.data[0] = (k & 0x00FF);
-      frame.data[1] = (k & 0x0F00) >> 8;
-      pthread_mutex_lock(&mutex1);
-    	if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
-    		perror("write");
-        printf("write error: nbytes = %d\n",nbytes);
-    		// return 1;
-    	}
-      /* get interface name of the received CAN frame */
-      ifr.ifr_ifindex = addr.can_ifindex;
-      ioctl(s, SIOCGIFNAME, &ifr);
-      printf("Received a CAN frame from interface %s\n", ifr.ifr_name);
-      pthread_mutex_unlock(&mutex1);
-      // put stuff in the circular buffer:
-      pthread_mutex_lock(&mutex1);
-      buffer_write(k);
-      printf("Wrote %d to data_buf[%d]: read = %d\twrite = %d\tempty = %d\tfull = %d\n",\
+    // read/write from/to the CAN bus:
+    frame.data[0] = (k & 0x00FF);
+    frame.data[1] = (k & 0x0F00) >> 8;
+    pthread_mutex_lock(&mutex1);
+  	if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
+  		perror("write");
+      printf("write error: nbytes = %d\n",nbytes);
+  		return NULL;
+  	}
+    /* get interface name of the received CAN frame */
+    ifr.ifr_ifindex = addr.can_ifindex;
+    ioctl(s, SIOCGIFNAME, &ifr);
+    printf("Received a CAN frame from interface %s\n", ifr.ifr_name);
+    pthread_mutex_unlock(&mutex1);
+    // put stuff in the circular buffer:
+    pthread_mutex_lock(&mutex1);
+    buffer_write(k);
+    printf("Wrote %d to data_buf[%d]: read = %d\twrite = %d\tempty = %d\tfull = %d\n",\
       k,get_write_index()-1,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
-      // nextWriteTime += periodms_write;
-      ++k;
-      pthread_mutex_unlock(&mutex1);
-    // }
+    pthread_mutex_unlock(&mutex1);
+    ++k;
     wait_period(&info);
   }
   close(s); // close the CAN socket
+  // RunProgram = 0;
   printf("Write thread has completed.\n");
-
   return NULL;
 }
 
@@ -287,16 +292,15 @@ void *UART_thread() {
   while(!UART_thread_begin) {;}
   make_periodic(UART_PERIOD_US, &info); // period (1st argument) in microseconds
   for (j = 0; j < BUFLEN;) {
-      pthread_mutex_lock(&mutex1);
-        bufferval = buffer_read();
-        printf("data_buf[%d] = %d\tread = %d\twrite = %d\tempty = %d\tfull = %d\n",\
-        j,bufferval,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
-
-        fflush(stdout);
-        sprintf(writemsg,"%d\r\n",bufferval);
-        serialPuts(serial_port, writemsg);
-        ++j;
-      pthread_mutex_unlock(&mutex1);
+    pthread_mutex_lock(&mutex1);
+    bufferval = buffer_read();
+    printf("data_buf[%d] = %d\tread = %d\twrite = %d\tempty = %d\tfull = %d\n",\
+      j,bufferval,get_read_index(),get_write_index(),buffer_empty(),buffer_full());
+    fflush(stdout);
+    sprintf(writemsg,"%d\r\n",bufferval);
+    serialPuts(serial_port, writemsg);
+    ++j;
+    pthread_mutex_unlock(&mutex1);
 
     // delay(3);
 
@@ -307,6 +311,6 @@ void *UART_thread() {
     wait_period(&info);
   }
   printf("Read thread has completed.\n");
-
+  // RunProgram = 0;
   return NULL;
 }
