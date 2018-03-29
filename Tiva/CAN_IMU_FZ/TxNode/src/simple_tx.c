@@ -514,7 +514,7 @@ main(void)
     // message object is not shared so it only needs to be initialized one
     // time, and can be used for repeatedly sending the same message ID.
     //
-    g_sCANMsgObject1.ui32MsgID = 0x0001;
+    g_sCANMsgObject1.ui32MsgID = 0x2001;
     g_sCANMsgObject1.ui32MsgIDMask = 0;
     g_sCANMsgObject1.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
     g_sCANMsgObject1.ui32MsgLen = sizeof(g_pui8Msg1);
@@ -525,7 +525,7 @@ main(void)
     // message object is not shared so it only needs to be initialized one
     // time, and can be used for repeatedly sending the same message ID.
     //
-    g_sCANMsgObject2.ui32MsgID = 0x0003;
+    g_sCANMsgObject2.ui32MsgID = 0x1001;
     g_sCANMsgObject2.ui32MsgIDMask = 0;
     g_sCANMsgObject2.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
     g_sCANMsgObject2.ui32MsgLen = sizeof(g_pui8Msg2);
