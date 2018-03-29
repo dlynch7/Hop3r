@@ -403,11 +403,11 @@ main(void)
     CANEnable(CAN0_BASE);
 
 
-    // Initialize a message object to receive CAN messages with ID 0x1001.
+    // Initialize a message object to receive CAN messages with ID 0x0001.
     // The expected ID must be set along with the mask to indicate that all
     // bits in the ID must match.
     //
-    sCANMessage.ui32MsgID = 0x1001;
+    sCANMessage.ui32MsgID = 0x2001;
     sCANMessage.ui32MsgIDMask = 0xfffff;
     sCANMessage.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER |
                              MSG_OBJ_EXTENDED_ID);
@@ -421,11 +421,11 @@ main(void)
     CANMessageSet(CAN0_BASE, 1, &sCANMessage, MSG_OBJ_TYPE_RX);
 
     //
-    // Change the ID to 0x2001, and load into message object 2 which will be
+    // Change the ID to 0x0010, and load into message object 2 which will be
     // used for receiving any CAN messages with this ID.  Since only the CAN
     // ID field changes, we don't need to reload all the other fields.
     //
-    sCANMessage.ui32MsgID = 0x2001;
+    sCANMessage.ui32MsgID = 0x1001;
     CANMessageSet(CAN0_BASE, 2, &sCANMessage, MSG_OBJ_TYPE_RX);
 
     UARTprintf("Rx node up!\n");
