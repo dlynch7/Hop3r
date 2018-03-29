@@ -244,6 +244,20 @@ SimpleDelay(void)
 
 //*****************************************************************************
 //
+// This function provides a 0.1 second delay using a simple polling method.
+//
+//*****************************************************************************
+void
+SimpleShortDelay(void)
+{
+    //
+    // Delay cycles for 1 second
+    //
+    SysCtlDelay(1600000 / 3);
+}
+
+//*****************************************************************************
+//
 // This function is the interrupt handler for the CAN peripheral.  It checks
 // for the cause of the interrupt, and maintains a count of all messages that
 // have been transmitted.
@@ -500,7 +514,7 @@ main(void)
     // message object is not shared so it only needs to be initialized one
     // time, and can be used for repeatedly sending the same message ID.
     //
-    g_sCANMsgObject1.ui32MsgID = 0x1001;
+    g_sCANMsgObject1.ui32MsgID = 0x0001;
     g_sCANMsgObject1.ui32MsgIDMask = 0;
     g_sCANMsgObject1.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
     g_sCANMsgObject1.ui32MsgLen = sizeof(g_pui8Msg1);
@@ -511,7 +525,7 @@ main(void)
     // message object is not shared so it only needs to be initialized one
     // time, and can be used for repeatedly sending the same message ID.
     //
-    g_sCANMsgObject2.ui32MsgID = 0x2001;
+    g_sCANMsgObject2.ui32MsgID = 0x0003;
     g_sCANMsgObject2.ui32MsgIDMask = 0;
     g_sCANMsgObject2.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
     g_sCANMsgObject2.ui32MsgLen = sizeof(g_pui8Msg2);
@@ -591,7 +605,8 @@ main(void)
         //
         // Now wait 1 second before continuing
         //
-        SimpleDelay();
+        // SimpleDelay();
+        SimpleShortDelay();
 
         //
         // Check the error flag to see if errors occurred
