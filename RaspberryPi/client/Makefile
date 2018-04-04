@@ -15,10 +15,10 @@ OBJ = main.o circ_buffer.o linux-can-utils/lib.o per_threads.o
 DEPS = circ_buffer.h linux-can-utils/lib.h per_threads.h
 
 #Any special libraries you are using in your project (e.g. -lbcm2835 -lrt `pkg-config --libs gtk+-3.0` ), or leave blank
-LIBS = -lwiringPi -lrt
+LIBS = -lm -lwiringPi -lrt
 
 #Set any compiler flags you want to use (e.g. -I/usr/include/somefolder `pkg-config --cflags gtk+-3.0` ), or leave blank
-CFLAGS = -Wall -pthread -lrt
+CFLAGS = -Wall -pthread
 
 #Set the compiler you are using ( gcc for C or g++ for C++ )
 CC = gcc
