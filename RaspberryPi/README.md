@@ -21,6 +21,13 @@ ssh pi@<the IP you found in step 2 above>
 ```
 When prompted, enter the Pi's password.
 
+Lastly, bring up the CAN interface. In the terminal, run
+```
+sudo /sbin/ip link set can0 up type can bitrate 5000
+```
+
+Note that the bitrate may be different than 5000 (which is extremely slow for CAN).
+
 ## Running the Pi and client programs
 Now that you have SSH'ed into the Pi, `cd` into `~/Embedded/client`. Open a new terminal on the client PC, and `cd` into `.../Hop3r/RaspberryPi/client`, where you should see `serial_basic.py`.
 
