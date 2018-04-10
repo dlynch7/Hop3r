@@ -1,0 +1,89 @@
+Send: 00 4e 02 0d     00 02 00 19
+      00 78 02 13     00 02 00 25
+
+Recv: 00 5a 00 00
+
+Send: 00 57 02 0d     00 02 00 00
+      00 87 02 13     00 02 00 00
+Recv: 00 5a 00 00
+
+Send: 00 4f 02 0d     00 02 ff e7
+      00 79 02 13     00 02 255 231
+Recv: 00 5a 00 00
+
+Send: 00 57 02 0d     00 02 00 00
+      00 87 02 13     00 02 00 00
+Recv: 00 5a 00 00
+
+
+from https://www.copleycontrols.com/wp-content/uploads/2018/02/Binary-Serial-Interface-Operation-Application-Notes.pdf
+
+COMMAND STRUCTURE:
+All binary commands sent to the drive start with a 4-byte header, consisting of the following bytes sent in order:
+1. Node number (if no multi-drop serial mode, this byte should be passed as 0)
+2. Checksum: calculated by performing a XOR on every byte of the command packet (incl. header and checksum value). Result should equal 0x5a
+3. Data size: number of 16-bit words of data to follow the header
+4. Opcode: identifies the command being sent
+
+Following the header structure is a block of zero or more 16-bit words of command data.
+Only even numbers of bytes are legal for command data values, and the number of bytes sent must equal TWICE the value of the data size location in the header.
+Data values are always sent MSB first.
+
+RESPONSE STRUCTURE:
+begins with a 4-byte header:
+1. Reserved (ignore it)
+2. Checksum (should equal 0x5a <-- verify that this is correct from the documentation)
+3. Data size: number of 16-bit words of data to follow the header
+4. Error code: 0 if success, otherwise error code
+
+OP-CODES
+0:  no operation
+7:  retrieve operating mode
+10: get flash CRC value
+11: swap operating modes
+12: get variable value
+13: set variable value (0x0d) -- see Parameter Dictionary
+14: copy variable value
+15: trace command
+16: reset
+17: trajectory command
+18: error log command
+20: Copley Virtual Machine command
+27: Encoder command
+28: Get CAN object command
+29: Set CAN object command
+33: Dynamic file command interface
+
+Example command to retrieve mode:
+00 xx 01 0c 00 24;        // get drive mode
+
+
+Example command sequence for current control:
+00 xx 02 0d 00 6a 00 00;  // disable current slope limiting (results in step changes)
+
+00 xx 02 0d 00 02 00 00;  // set commanded current to 0.00 A (increments of 0.01 A)
+00 xx 02 0d 00 24 00 01;  // enable drive, current loop driven by programmed current value
+00 xx 01 0c 00 0c;        // get actual q-axis current
+00 xx 01 0c 00 0b;        // get actual q-axis current
+
+00 xx 02 0d 00 02 00 c8;  // set commanded current to 2.00 A (increments of 0.01 A --> 0d200 = 0xc8)
+00 xx 02 0d 00 24 00 01;  // enable drive, current loop driven by programmed current value
+00 xx 01 0c 00 0c;        // get actual q-axis current
+00 xx 01 0c 00 0b;        // get actual q-axis current
+
+00 xx 02 0d 00 02 00 00;  // set commanded current to 0.00 A (increments of 0.01 A)
+00 xx 02 0d 00 24 00 01;  // enable drive, current loop driven by programmed current value
+00 xx 01 0c 00 0c;        // get actual q-axis current
+00 xx 01 0c 00 0b;        // get actual q-axis current
+
+00 xx 02 0d 00 02 ff 38;  // set commanded current to -2.00 A (increments of 0.01 A --> 0d200 = 0xc8)
+00 xx 02 0d 00 24 00 01;  // enable drive, current loop driven by programmed current value
+00 xx 01 0c 00 0c;        // get actual q-axis current
+00 xx 01 0c 00 0b;        // get actual q-axis current
+
+00 xx 02 0d 00 02 00 00;  // set commanded current to 0.00 A (increments of 0.01 A)
+00 xx 02 0d 00 24 00 01;  // enable drive, current loop driven by programmed current value
+00 xx 01 0c 00 0c;        // get actual q-axis current
+00 xx 01 0c 00 0b;        // get actual q-axis current
+
+00 xx 02 0d 00 24 00 00;  // disable drive
