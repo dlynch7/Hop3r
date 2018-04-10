@@ -30,6 +30,8 @@ Note that the bitrate may be different than 5000 (which is extremely slow for CA
 
 [This](http://copperhilltech.com/pican2-controller-area-network-can-interface-for-raspberry-pi/) is a useful 'getting started' user guide to CAN on Linux with the PiCAN2 hat.
 
+The CAN utility functions listed in the link above are in `~/Embedded/can-test-pi`.
+
 ## Running the Pi and client programs
 Now that you have SSH'ed into the Pi, `cd` into `~/Embedded/client`. Open a new terminal on the client PC, and `cd` into `.../Hop3r/RaspberryPi/client`, where you should see `serial_basic.py`.
 
