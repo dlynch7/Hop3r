@@ -28,6 +28,8 @@ sudo /sbin/ip link set can0 up type can bitrate 5000
 
 Note that the bitrate may be different than 5000 (which is extremely slow for CAN).
 
+[This](http://copperhilltech.com/pican2-controller-area-network-can-interface-for-raspberry-pi/) is a useful 'getting started' user guide to CAN on Linux with the PiCAN2 hat.
+
 ## Running the Pi and client programs
 Now that you have SSH'ed into the Pi, `cd` into `~/Embedded/client`. Open a new terminal on the client PC, and `cd` into `.../Hop3r/RaspberryPi/client`, where you should see `serial_basic.py`.
 
