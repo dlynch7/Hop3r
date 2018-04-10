@@ -7,7 +7,7 @@
 #include <math.h>
 #include "kinematic.h"
 
-#define PI          3.14159265
+#define PI 3.14159265
 
 float qa[3] = {};
 float dqa_dt[3] = {};
@@ -16,17 +16,17 @@ float footPose[3] = {};
 float twist[3] = {};
 float wrench[3] = {};
 
-int main(void) {
-  float qa[3] = {-1.6845,-2.6214,-1.4571};
-  float dqa_dt[3] = {0,0,0};
-  float qu[6] = {0.5867,-0.4729,2.0785,-1.0279,-0.5867,0.4729};
-  float footPose[3] = {0,-0.27,-PI/2};
-
-  geomFK(qa,qu,footPose,1);
-  subchainIK(qa,qu,footPose);
-
-  // printf("%f\t%f\t%f\t%f\t%f\t%f\n",qu[0],qu[1],qu[2],qu[3],qu[4],qu[5]);
-}
+// int main(void) {
+//   float qa[3] = {-1.6845,-2.6214,-1.4571};
+//   float dqa_dt[3] = {0,0,0};
+//   float qu[6] = {0.5867,-0.4729,2.0785,-1.0279,-0.5867,0.4729};
+//   float footPose[3] = {0,-0.27,-PI/2};
+//
+//   geomFK(qa,qu,footPose,1);
+//   subchainIK(qa,qu,footPose);
+//
+//   // printf("%f\t%f\t%f\t%f\t%f\t%f\n",qu[0],qu[1],qu[2],qu[3],qu[4],qu[5]);
+// }
 
 // forward kinematics:
 int8_t geomFK(float *qa, float *qu, float *footPose, uint8_t solOption) {
@@ -148,20 +148,26 @@ int8_t geomFK(float *qa, float *qu, float *footPose, uint8_t solOption) {
 int8_t subchainFK(float *qa, float *qu, float *footPose, uint8_t chainOption) {
   switch (chainOption) {
     case 0: // evaluate along theta-chain:
+      {
       footPose[0] = -B1X + L1*cos(qa[0]) + L2*cos(qa[0] + qu[0]) + L8*cos(qa[0] + qu[0] + qu[1]);
       footPose[1] = B1Y + L1*sin(qa[0]) + L2*sin(qa[0] + qu[0]) + L8*sin(qa[0] + qu[0] + qu[1]);
       footPose[2] = qa[0] + qu[0] + qu[1];
       return 0;
+      }
     case 1: // evaluate along phi-chain:
+      {
       footPose[0] = L3*cos(qa[1]) + L4*cos(qa[1] + qu[2]) + (L7+L8)*cos(qa[1] + qu[2] + qu[3]);
       footPose[1] = L3*sin(qa[1]) + L4*sin(qa[1] + qu[2]) + (L7+L8)*sin(qa[1] + qu[2] + qu[3]);
       footPose[2] = qa[1] + qu[2] + qu[3];
       return 0;
+      }
     case 2: // evaluate along psi-chain:
+      {
       footPose[0] = B2X + L5*cos(qa[2]) + L6*cos(qa[2] + qu[4]) + L8*cos(qa[2] + qu[4] + qu[5]);
       footPose[1] = B2Y + L5*sin(qa[2]) + L6*sin(qa[2] + qu[4]) + L8*sin(qa[2] + qu[4] + qu[5]);
       footPose[2] = qa[2] + qu[4] + qu[5];
       return 0;
+      }
     default:
       return -1;
   }
@@ -280,22 +286,174 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   return 1;
 }
 
-// // Jacobians:
-// int8_t actuatorJacobian(float *J, float *qa, float *qu, uint8_t chainOption) {
-//
-// }
-//
-// int8_t constraintJacobian(float *J, float *qa, float *qu) {
-//
-// }
-//
-// int8_t subchainJacobian(float *J, float *qa, float *qu, uint8_t chainOption) {
-//
-// }
-//
-// // task space to joint space conversions
-// int8_t twist2vels(float *qa, float *qu, float *dqa_dt, float *twist) {
-//
-// }
-//
-// int8_t wrench2torques(float *qa, float *qu, float *torques, float *wrench)
+// Jacobians:
+int8_t actuatorJacobian(float *J, float *qa, float *qu, uint8_t chainOption) { // 3x3 matrix
+  float[6][6] Jc; // constraint Jacobian
+  float[3][3] Jtheta; // subchain Jacobian (theta chain)
+  float[3][3] Jphi; // subchain Jacobian (phi chain)
+  float[3][3] Jpsi; // subchain Jacobian (psi chain)
+  float[6][3] Ha; // another Jacobian
+
+  // compute the constraint Jacobian:
+  if (constraintJacobian(Jc,qa,qu)) {
+    return 1; // failure
+  }
+
+  // compute all 3 open subchain Jacobians:
+  if (subchainJacobian(Jtheta,qa,qu,0)) {
+    return 1; // failure
+  }
+  if (subchainJacobian(Jphi,qa,qu,1)) {
+    return 1; // failure
+  }
+  if (subchainJacobian(Jpsi,qa,qu,2)) {
+    return 1; // failure
+  }
+
+  // form Ha from open subchain Jacobians:
+  Ha[0][0] = Jtheta[0][0];
+  Ha[0][1] = -Jphi[0][0];
+  Ha[0][2] = 0;
+  Ha[1][0] = Jtheta[1][0];
+  Ha[1][1] = -Jphi[1][0];
+  Ha[1][2] = 0;
+  Ha[2][0] = Jtheta[2][0];
+  Ha[2][1] = -Jphi[2][0];
+  Ha[2][2] = 0;
+  Ha[3][0] = 0;
+  Ha[3][1] = -Jphi[0][0];
+  Ha[3][2] = Jpsi[0][0];
+  Ha[4][0] = 0;
+  Ha[4][1] = -Jphi[1][0];
+  Ha[4][2] = Jpsi[1][0];
+  Ha[5][0] = 0;
+  Ha[5][1] = -Jphi[2][0];
+  Ha[5][2] = Jpsi[2][0];
+
+  // Compute the actuator Jacobian using the specified subchain:
+  switch (chainOption) {
+    case 0:
+      {
+
+      }
+    case 1:
+      {
+
+      }
+    case 2:
+      {
+
+      }
+    default:
+      return 1; // failure
+  }
+}
+
+int8_t constraintJacobian(float *J, float *qa, float *qu) { // 6x6 matrix
+  // row 1:
+  J[0][0] = -L2*sin(qa[0]+qu[0]) - L8*sin(qa[0]+qu[0]+qu[1]);
+  J[0][1] = -L8*sin(qa[0]+qu[0]+qu[1]);
+  J[0][2] = L4*sin(qa[1]+qu[2]) + (L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+  J[0][3] = (L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+  J[0][4] = 0;
+  J[0][5] = 0;
+  // row 2:
+  J[1][0] = L2*cos(qa[0]+qu[0]) + L8*cos(qa[0]+qu[0]+qu[1]);
+  J[1][1] = L8*cos(qa[0]+qu[0]+qu[1]);
+  J[1][2] = -L4*cos(qa[1]+qu[2]) - (L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+  J[1][3] = -(L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+  J[1][4] = 0;
+  J[1][5] = 0;
+  // row 3:
+  J[2][0] = 1;
+  J[2][1] = 1;
+  J[2][2] = -1;
+  J[2][3] = -1;
+  J[2][4] = 0;
+  J[2][5] = 0;
+  // row 4:
+  J[3][0] = 0;
+  J[3][1] = 0;
+  J[3][2] = L4*sin(qa[1]+qu[2]) + (L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+  J[3][3] = (L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+  J[3][4] = -L6*sin(qa[2]+qu[4]) - L8*sin(qa[2]+qu[4]+qu[5]);
+  J[3][5] = -L8*sin(qa[2]+qu[4]+qu[5]);
+  // row 5:
+  J[4][0] = 0;
+  J[4][1] = 0;
+  J[4][2] = -L4*cos(qa[1]+qu[2]) - (L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+  J[4][3] = -(L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+  J[4][4] = L6*cos(qa[2]+qu[4]) + L8*cos(qa[2]+qu[4]+qu[5]);
+  J[4][5] = L8*cos(qa[2]+qu[4]+qu[5]);
+  // row 6:
+  J[5][0] = 0;
+  J[5][1] = 0;
+  J[5][2] = -1;
+  J[5][3] = -1;
+  J[5][4] = 1;
+  J[5][5] = 1;
+
+  return 0;
+}
+
+int8_t subchainJacobian(float *J, float *qa, float *qu, uint8_t chainOption) { // 3x3 matrix
+  switch (chainOption) {
+    case 0: // theta chain
+      {
+      // row 1:
+      J[0][0] = -L1*sin(qa[0]) - L2*sin(qa[0]+qu[0]) - L8*sin(qa[0]+qu[0]+qu[1]);
+      J[0][1] = -L2*sin(qa[0]+qu[0]) - L8*sin(qa[0]+qu[0]+qu[1]);
+      J[0][2] = -L8*sin(qa[0]+qu[0]+qu[1]);
+      // row 2:
+      J[1][0] = L1*cos(qa[0]) + L2*cos(qa[0]+qu[0]) + L8*cos(qa[0]+qu[0]+qu[1]);
+      J[1][1] = L2*cos(qa[0]+qu[0]) + L8*cos(qa[0]+qu[0]+qu[1]);
+      J[1][2] = L8*cos(qa[0]+qu[0]+qu[1]);
+      // row 3:
+      J[2][0] = 1;
+      J[2][1] = 1;
+      J[2][2] = 1;
+      return 0;
+      }
+    case 1: // phi chain
+      {
+      // row 1:
+      J[0][0] = -L3*sin(qa[1]) - L4*sin(qa[1]+qu[2]) - (L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+      J[0][1] = -L4*sin(qa[1]+qu[2]) - (L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+      J[0][2] = -(L7+L8)*sin(qa[1]+qu[2]+qu[3]);
+      // row 2:
+      J[1][0] = L3*cos(qa[1]) + L4*cos(qa[1]+qu[2]) + (L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+      J[1][1] = L4*cos(qa[1]+qu[2]) + (L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+      J[1][2] = (L7+L8)*cos(qa[1]+qu[2]+qu[3]);
+      // row 3:
+      J[2][0] = 1;
+      J[2][1] = 1;
+      J[2][2] = 1;
+      return 0;
+      }
+    case 2: // psi chain
+      {
+      // row 1:
+      J[0][0] = -L5*sin(qa[2]) - L6*sin(qa[2]+qu[4]) - L8*sin(qa[2]+qu[4]+qu[5]);
+      J[0][1] = -L6*sin(qa[2]+qu[4]) - L8*sin(qa[2]+qu[4]+qu[5]);
+      J[0][2] = -L8*sin(qa[2]+qu[4]+qu[5]);
+      // row 2:
+      J[1][0] = L5*cos(qa[2]) + L6*cos(qa[2]+qu[4]) + L8*cos(qa[2]+qu[4]+qu[5]);
+      J[1][1] = L6*cos(qa[2]+qu[4]) + L8*cos(qa[2]+qu[4]+qu[5]);
+      J[1][2] = L8*cos(qa[2]+qu[4]+qu[5]);
+      // row 3:
+      J[2][0] = 1;
+      J[2][1] = 1;
+      J[2][2] = 1;
+      return 0;
+      }
+    default:// unknown option
+      return -1;
+  }
+}
+
+// task space to joint space conversions
+int8_t twist2vels(float *qa, float *qu, float *dqa_dt, float *twist) {
+
+}
+
+int8_t wrench2torques(float *qa, float *qu, float *torques, float *wrench)
