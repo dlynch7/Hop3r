@@ -1,7 +1,7 @@
 import serial
 import time
 
-timeout = 5
+timeout = 10
 timeoutOccurred = 0
 
 ser = serial.Serial(port='/dev/ttyUSB0',baudrate=115200,timeout=timeout) # open serial port
