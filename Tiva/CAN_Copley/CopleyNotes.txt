@@ -18,6 +18,8 @@ Recv: 00 5a 00 00
 
 from https://www.copleycontrols.com/wp-content/uploads/2018/02/Binary-Serial-Interface-Operation-Application-Notes.pdf
 
+Dean Crumlish's YouTube video: https://youtu.be/hGEtd86k3dU
+
 COMMAND STRUCTURE:
 All binary commands sent to the drive start with a 4-byte header, consisting of the following bytes sent in order:
 1. Node number (if no multi-drop serial mode, this byte should be passed as 0)
