@@ -2,6 +2,8 @@
 
 # C things:
 *.o
+*.bin
+*.out
 
 # MATLAB autosave files:
 *.asv
