@@ -4,6 +4,8 @@
 *.o
 *.bin
 *.out
+bin/
+build/
 
 # MATLAB autosave files:
 *.asv
