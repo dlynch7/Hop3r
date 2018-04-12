@@ -1,6 +1,7 @@
 //*****************************************************************************
 //
-// simple_rx.c - Example demonstrating simple CAN message reception.
+// main.c - Motor control program with CAN and UART interfaces.
+// begun 4/12/18
 //
 // Copyright (c) 2010-2017 Texas Instruments Incorporated.  All rights reserved.
 // Software License Agreement
@@ -50,7 +51,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
-#include "driverlib/rom.h"
+// #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/systick.h"
 #include "driverlib/timer.h"
@@ -67,39 +68,13 @@
 
 //*****************************************************************************
 //
-//! \addtogroup can_examples_list
-//! <h1>Simple CAN RX (simple_rx)</h1>
-//!
-//! This example shows the basic setup of CAN in order to receive messages
-//! from the CAN bus.  The CAN peripheral is configured to receive messages
-//! with any CAN ID and then print the message contents to the console.
-//!
-//! This example uses the following peripherals and I/O signals.  You must
-//! review these and change as needed for your own board:
-//! - CAN0 peripheral
-//! - GPIO port B peripheral (for CAN0 pins)
-//! - CAN0RX - PB4
-//! - CAN0TX - PB5
-//!
-//! The following UART signals are configured only for displaying console
-//! messages for this example.  These are not required for operation of CAN.
-//! - GPIO port A peripheral (for UART0 pins)
-//! - UART0RX - PA0
-//! - UART0TX - PA1
-//!
-//! This example uses the following interrupt handlers.  To use this example
-//! in your own application you must add these interrupt handlers to your
-//! vector table.
-//! - INT_CAN0 - CANIntHandler
-//
-//*****************************************************************************
-
-//*****************************************************************************
-//
 // Global variables shared between main loop and motor control ISR
 //
 //*****************************************************************************
-uint32_t cur_ref = 0;
+typedef enum {IDLE, CUR_CTRL, POS_CTRL} mode; // define data structure containing modes
+volatile mode MODE;
+uint32_t CUR_REF = 0;
+uint32_t POS_REF = 0;
 
 //*****************************************************************************
 //
@@ -141,40 +116,13 @@ volatile bool g_bErrFlag = 0;
 void
 InitConsole(void)
 {
-    //
-    // Enable GPIO port A which is used for UART0 pins.
-    // TODO: change this to whichever GPIO port you are using.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
-
-    //
-    // Configure the pin muxing for UART0 functions on port A0 and A1.
-    // This step is not necessary if your part does not support pin muxing.
-    // TODO: change this to select the port/pin you are using.
-    //
-    GPIOPinConfigure(GPIO_PA0_U0RX);
-    GPIOPinConfigure(GPIO_PA1_U0TX);
-
-    //
-    // Enable UART0 so that we can configure the clock.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-
-    //
-    // Use the internal 16MHz oscillator as the UART clock source.
-    //
-    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
-
-    //
-    // Select the alternate (UART) function for these pins.
-    // TODO: change this to select the port/pin you are using.
-    //
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
-
-    //
-    // Initialize the UART for console I/O.
-    //
-    UARTStdioConfig(0, 115200, 16000000);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA); // Enable GPIO port A which is used for UART0 pins.
+    GPIOPinConfigure(GPIO_PA0_U0RX); // pin muxing
+    GPIOPinConfigure(GPIO_PA1_U0TX); // pin muxing
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // Enable UART0 so that we can configure the clock.
+    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC); // Use the internal 16MHz oscillator as the UART clock source.
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1); // Select the alternate (UART) function for these pins.
+    UARTStdioConfig(0, 115200, 16000000); // Initialize the UART for console I/O.
 }
 
 //*****************************************************************************
@@ -186,6 +134,25 @@ void
 MotorControllerIntHandler(void)
 {
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
+    switch (MODE) {
+      case IDLE:
+      {
+        CUR_REF = 0;
+        break;
+      }
+      case CUR_CTRL:
+      {
+        break;
+      }
+      case POS_CTRL:
+      {
+        break;
+      }
+      default:
+      {
+        break;
+      }
+    }
     HWREGBITW(&g_ui32Flags, 0) ^= 1; // Toggle the flag for the first timer.
     GPIOPinWrite(GPIO_PORTF_BASE, LED_RED, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
 }
@@ -216,19 +183,12 @@ PrintCANMessageInfo(tCANMsgObject *psCANMsg, uint32_t ui32MsgObj)
 {
     unsigned int uIdx;
 
-    //
-    // Check to see if there is an indication that some messages were
-    // lost.
-    //
-    if(psCANMsg->ui32Flags & MSG_OBJ_DATA_LOST)
+    if(psCANMsg->ui32Flags & MSG_OBJ_DATA_LOST) // if there is an indication that some messages were lost
     {
         UARTprintf("CAN message loss detected on message object %d\n",
                    ui32MsgObj);
     }
-
-    //
     // Print out the contents of the message that was received.
-    //
     UARTprintf("Msg Obj=%u ID=0x%05X len=%u data=0x", ui32MsgObj,
                psCANMsg->ui32MsgID, psCANMsg->ui32MsgLen);
     for(uIdx = 0; uIdx < psCANMsg->ui32MsgLen; uIdx++)
@@ -303,6 +263,7 @@ main(void)
     uint32_t ui32SysClock;
 #endif
 
+    MODE = IDLE;
 
     tCANMsgObject sCANMessage;
     uint8_t pui8MsgData[8];
@@ -504,8 +465,8 @@ main(void)
             // Print information about the message just received.
             //
             // PrintCANMessageInfo(&sCANMessage, 1);
-            cur_ref = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
-            UARTprintf("cur_ref: %d\n",cur_ref);
+            CUR_REF = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
+            UARTprintf("CUR_REF: %d\n",CUR_REF);
         }
 
         //
@@ -517,7 +478,9 @@ main(void)
             sCANMessage.pui8MsgData = pui8MsgData;
             CANMessageGet(CAN0_BASE, 2, &sCANMessage, 0);
             g_bRXFlag2 = 0;
-            PrintCANMessageInfo(&sCANMessage, 2);
+            // PrintCANMessageInfo(&sCANMessage, 2);
+            POS_REF = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
+            UARTprintf("POS_REF: %d\n",POS_REF);
         }
 
     }
