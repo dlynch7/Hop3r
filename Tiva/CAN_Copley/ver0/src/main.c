@@ -96,6 +96,13 @@
 
 //*****************************************************************************
 //
+// Global variables shared between main loop and motor control ISR
+//
+//*****************************************************************************
+uint32_t cur_ref = 0;
+
+//*****************************************************************************
+//
 // Flags that contain the current value of the interrupt indicator as displayed
 // on the UART.
 //
@@ -172,50 +179,15 @@ InitConsole(void)
 
 //*****************************************************************************
 //
-// The interrupt handler for the first timer interrupt.
+// The interrupt handler for the timer interrupt.
 //
 //*****************************************************************************
 void
-Timer0IntHandler(void)
+MotorControllerIntHandler(void)
 {
-    //
-    // Clear the timer interrupt.
-    //
-    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-
-    //
-    // Toggle the flag for the first timer.
-    //
-    HWREGBITW(&g_ui32Flags, 0) ^= 1;
-
-    //
-    // Use the flags to Toggle the LED for this timer
-    //
-    GPIOPinWrite(GPIO_PORTF_BASE, LED_RED, g_ui32Flags << 1);
-}
-
-//*****************************************************************************
-//
-// The interrupt handler for the second timer interrupt.
-//
-//*****************************************************************************
-void
-Timer1IntHandler(void)
-{
-    //
-    // Clear the timer interrupt.
-    //
-    TimerIntClear(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
-    //
-    // Toggle the flag for the second timer.
-    //
-    HWREGBITW(&g_ui32Flags, 1) ^= 1;
-
-    //
-    // Use the flags to Toggle the LED for this timer
-    //
-    GPIOPinWrite(GPIO_PORTF_BASE, LED_BLUE, g_ui32Flags << 1);
+    TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
+    HWREGBITW(&g_ui32Flags, 0) ^= 1; // Toggle the flag for the first timer.
+    GPIOPinWrite(GPIO_PORTF_BASE, LED_RED, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
 }
 
 //*****************************************************************************
@@ -223,39 +195,14 @@ Timer1IntHandler(void)
 // Set up timer to generate interrupts
 //
 //*****************************************************************************
-void TimersBegin(){
-  //
-  // Enable the peripherals used by this example.
-  //
-  SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0);
-  // SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER1);
-
-  //
-  // Enable processor interrupts.
-  //
-  IntMasterEnable();
-
-  //
-  // Configure the two 32-bit periodic timers.
-  //
-  TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC);
-  // TimerConfigure(TIMER1_BASE, TIMER_CFG_PERIODIC);
+void TimerBegin(){
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_TIMER0); // Enable the peripherals used by this example.
+  IntMasterEnable(); // Enable processor interrupts.
+  TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC); // Configure a 32-bit periodic timer.
   TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet() / POS_CTRL_FREQ);
-  // TimerLoadSet(TIMER1_BASE, TIMER_A, SysCtlClockGet());
-
-  //
-  // Setup the interrupts for the timer timeouts.
-  //
-  IntEnable(INT_TIMER0A);
-  // IntEnable(INT_TIMER1A);
+  IntEnable(INT_TIMER0A); // Setup the interrupts for the timer timeouts.
   TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
-  // TimerIntEnable(TIMER1_BASE, TIMER_TIMA_TIMEOUT);
-
-  //
-  // Enable the timers.
-  //
-  TimerEnable(TIMER0_BASE, TIMER_A);
-  // TimerEnable(TIMER1_BASE, TIMER_A);
+  TimerEnable(TIMER0_BASE, TIMER_A); // Enable the timer.
 }
 
 //*****************************************************************************
@@ -302,16 +249,8 @@ void
 CANIntHandler(void)
 {
     uint32_t ui32Status;
-
-    //
-    // Read the CAN interrupt status to find the cause of the interrupt
-    //
-    ui32Status = CANIntStatus(CAN0_BASE, CAN_INT_STS_CAUSE);
-
-    //
-    // If the cause is a controller status interrupt, then get the status
-    //
-    if(ui32Status == CAN_INT_INTID_STATUS)
+    ui32Status = CANIntStatus(CAN0_BASE, CAN_INT_STS_CAUSE); // Read the CAN interrupt status to find the cause of the interrupt
+    if(ui32Status == CAN_INT_INTID_STATUS) // If the cause is a controller status interrupt, then get the status
     {
         //
         // Read the controller status.  This will return a field of status
@@ -321,17 +260,9 @@ CANIntHandler(void)
         // The act of reading this status will clear the interrupt.
         //
         ui32Status = CANStatusGet(CAN0_BASE, CAN_STS_CONTROL);
-
-        //
-        // Set a flag to indicate some errors may have occurred.
-        //
-        g_bErrFlag = 1;
+        g_bErrFlag = 1; // Set a flag to indicate some errors may have occurred.
     }
-
-    //
-    // Check if the cause is message object 1.
-    //
-    else if(ui32Status == 1)
+    else if(ui32Status == 1) // Check if the cause is message object 1.
     {
         //
         // Getting to this point means that the RX interrupt occurred on
@@ -339,46 +270,20 @@ CANIntHandler(void)
         // message object interrupt.
         //
         CANIntClear(CAN0_BASE, 1);
-
-        //
-        // Increment a counter to keep track of how many messages have been
-        // received.  In a real application this could be used to set flags to
-        // indicate when a message is received.
-        //
-        g_ui32MsgCount++;
-
-        //
-        // Set flag to indicate received message is pending for this message
-        // object.
-        //
-        g_bRXFlag1 = 1;
-
-        //
-        // Since a message was received, clear any error flags.
-        //
-        g_bErrFlag = 0;
+        g_ui32MsgCount++; // increment a counter to track how many messages have been received
+        g_bRXFlag1 = 1; //Set flag to indicate received message is pending for this message object.
+        g_bErrFlag = 0; // Since a message was received, clear any error flags.
     }
-
-    //
-    // Check if the cause is message object 2.
-    //
-    else if(ui32Status == 2)
+    else if(ui32Status == 2) // Check if the cause is message object 2.
     {
         CANIntClear(CAN0_BASE, 2);
         g_ui32MsgCount++;
         g_bRXFlag2 = 1;
         g_bErrFlag = 0;
     }
-
-    //
-    // Otherwise, something unexpected caused the interrupt.  This should
-    // never happen.
-    //
-    else
+    else // Otherwise, something unexpected caused the interrupt.
     {
-        //
         // Spurious interrupt handling can go here.
-        //
     }
 }
 
@@ -427,7 +332,7 @@ main(void)
 #endif
 
 
-    TimersBegin();
+    TimerBegin();
 
     //
     // Set up the serial console to use for displaying messages.  This is
@@ -526,7 +431,7 @@ main(void)
     // The expected ID must be set along with the mask to indicate that all
     // bits in the ID must match.
     //
-    sCANMessage.ui32MsgID = 0x3001;
+    sCANMessage.ui32MsgID = 0x3001; // used for commanded current
     sCANMessage.ui32MsgIDMask = 0xfffff;
     sCANMessage.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER |
                              MSG_OBJ_EXTENDED_ID);
@@ -544,10 +449,10 @@ main(void)
     // used for receiving any CAN messages with this ID.  Since only the CAN
     // ID field changes, we don't need to reload all the other fields.
     //
-    sCANMessage.ui32MsgID = 0x4001;
+    sCANMessage.ui32MsgID = 0x4001; // used for commanded position
     CANMessageSet(CAN0_BASE, 2, &sCANMessage, MSG_OBJ_TYPE_RX);
 
-    UARTprintf("Rx node up!\n");
+    UARTprintf("Motor 1 node up!\n");
     UARTprintf("SysCtlClockGet() = %d\n",SysCtlClockGet());
 
     //
@@ -598,7 +503,9 @@ main(void)
             //
             // Print information about the message just received.
             //
-            PrintCANMessageInfo(&sCANMessage, 1);
+            // PrintCANMessageInfo(&sCANMessage, 1);
+            cur_ref = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
+            UARTprintf("cur_ref: %d\n",cur_ref);
         }
 
         //
