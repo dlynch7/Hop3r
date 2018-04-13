@@ -17,6 +17,33 @@
 #include "driverlib/systick.h"
 #include "driverlib/uart.h"
 
+//*****************************************************************************
+//
+// Copley Accelus op-codes
+//
+//*****************************************************************************
+#define OPCODE_NO_OP 0
+#define OPCODE_RETRIEVE_MODE 7
+#define OPCODE_GET_FLASH_CRC_VAL 10
+#define OPCODE_SWAP_OP_MODES 11
+#define OPCODE_GET_VAR_VAL 12
+#define OPCODE_SET_VAR_VAL 13
+#define OPCODE_COPY_VAR_VAL 14
+#define OPCODE_TRACE_CMD 15
+#define OPCODE_RESET 16
+#define OPCODE_TRAJ_CMD 17
+#define OPCODE_ERR_LOG 18
+#define OPCODE_CVM_CMD 20
+#define OPCODE_ENC_CMD 27
+#define OPCODE_GET_CAN_OBJ_CMD 28
+#define OPCODE_SET_CAN_OBJ_CMD 29
+#define OPCODE_DYN_FILE_CMD 33
+
+//*****************************************************************************
+//
+// Other #defines
+//
+//*****************************************************************************
 #define COPLEY_NODE_NUMBER 0
 
 //*****************************************************************************
