@@ -11,8 +11,8 @@ Hopp3r has 3 motor control nodes, 3 boom encoder nodes, and 1 force sense/IMU no
 
 Here are the relevant files:
 
-[Motor control node](/CAN_Copley/ver0)
+[Motor control node](Tiva/CAN_Copley/ver0)
 
-[Boom encoder node](/CAN_Boom)
+[Boom encoder node](Tiva/CAN_Boom)
 
-[Force sense/IMU node](/CAN_IMU_FZ/TxNode)
+[Force sense/IMU node](Tiva/CAN_IMU_FZ/TxNode)
