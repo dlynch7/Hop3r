@@ -43,6 +43,14 @@
 
 //*****************************************************************************
 //
+// Copley Accelus Parameters (see parameter_dictionary.pdf)
+//
+//*****************************************************************************
+#define PARAM_CUR_CMD 0x02 // current loop programmed value
+#define PARAM_STATE 0x24 // desired state
+
+//*****************************************************************************
+//
 // Copley Accelus state options (see parameter_dictionary.pdf)
 //
 //*****************************************************************************
@@ -131,7 +139,7 @@ uint8_t set_copley_mode(uint8_t copley_mode) {
 
   // body:
   tx_packet[4] = 0;
-  tx_packet[5] = 0x24; // register to write to: "desired state" (see Parameter Dictionary)
+  tx_packet[5] = PARAM_STATE; // register to write to: "desired state" (see Parameter Dictionary)
   tx_packet[6] = 0;
   tx_packet[7] = copley_mode;
 
@@ -164,7 +172,7 @@ uint8_t get_copley_mode(void) {
 
   // body:
   tx_packet[4] = 0;
-  tx_packet[5] = 0x24; // register to read from: "desired state" (see Parameter Dictionary)
+  tx_packet[5] = PARAM_STATE; // register to read from: "desired state" (see Parameter Dictionary)
 
   // calculate checksum:
   checksum = gen_checksum(tx_packet, sizeof(tx_packet)/sizeof(tx_packet[0]));
@@ -182,7 +190,35 @@ uint8_t get_copley_mode(void) {
 }
 
 uint8_t set_current_mA(int16_t cur_ref_mA) {
-  return 0;
+  uint8_t checksum = 0;
+  uint8_t tx_packet[HEADER_LEN + 4];
+  uint8_t i = 0; // TO-DO: delete this later
+
+  // header:
+  tx_packet[0] = COPLEY_NODE_NUMBER;
+  tx_packet[1] = checksum; // checksum is still 0 at this point, it will change later
+  tx_packet[2] = 2; // 2 16-bit words will follow header
+  tx_packet[3] = OPCODE_SET_VAR_VAL;
+
+  // body:
+  tx_packet[4] = 0;
+  tx_packet[5] = PARAM_CUR_CMD; // register to write to: "desired state" (see Parameter Dictionary)
+  tx_packet[6] = cur_ref_mA >> 8;
+  tx_packet[7] = cur_ref_mA & 0x00ff;
+
+  // calculate checksum:
+  checksum = gen_checksum(tx_packet,sizeof(tx_packet)/sizeof(tx_packet[0]));
+  tx_packet[1] = checksum;
+
+  // TO-DO: send the command...
+  // UARTprintf("Send: 0x");
+  // for(i = 0; i < (sizeof(tx_packet)/sizeof(tx_packet[0])); i++)
+  // {
+  //     UARTprintf("%02X ", tx_packet[i]);
+  // }
+  // UARTprintf("\n");
+
+  return 0; // TO-DO: receive, process, and return response from Copley Accelus
 }
 uint16_t get_current_mA(void) {
   return 0;
