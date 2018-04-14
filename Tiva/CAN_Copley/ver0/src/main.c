@@ -51,18 +51,19 @@
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
-// #include "driverlib/rom.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/systick.h"
 #include "driverlib/timer.h"
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
 
+#include "copley_accelus.h"
+
 #define LED_RED GPIO_PIN_1
 #define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
-#define POS_CTRL_FREQ 1000
+#define POS_CTRL_FREQ 1000 // TODO: revert to 1000
 
 #define PI 3.14159
 
@@ -142,6 +143,7 @@ MotorControllerIntHandler(void)
       }
       case CUR_CTRL:
       {
+        set_current_mA(CUR_REF);
         break;
       }
       case POS_CTRL:
@@ -412,6 +414,12 @@ main(void)
     //
     sCANMessage.ui32MsgID = 0x4001; // used for commanded position
     CANMessageSet(CAN0_BASE, 2, &sCANMessage, MSG_OBJ_TYPE_RX);
+
+    set_copley_mode(1);
+    get_copley_mode();
+    MODE = CUR_CTRL;
+    set_current_mA(CUR_REF);
+    // set_current_mA(32767);
 
     UARTprintf("Motor 1 node up!\n");
     UARTprintf("SysCtlClockGet() = %d\n",SysCtlClockGet());
