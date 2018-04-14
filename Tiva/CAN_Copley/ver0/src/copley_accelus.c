@@ -16,6 +16,7 @@
 #include "driverlib/sysctl.h"
 #include "driverlib/systick.h"
 #include "driverlib/uart.h"
+#include "utils/uartstdio.h"
 
 //*****************************************************************************
 //
@@ -84,13 +85,11 @@
 // Private functions (used only in copley_accelus.c):
 //
 //*****************************************************************************
-static uint8_t gen_checksum(uint8_t *tx_packet) { // generate checksum based on packet
+static uint8_t gen_checksum(uint8_t *tx_packet, uint8_t nbytes) { // generate checksum based on packet
   // from https://youtu.be/hGEtd86k3dU
   uint8_t i = 0;
-  uint8_t nbytes = 0;
   uint8_t checksum = 0;
 
-  nbytes = sizeof(tx_packet)/sizeof(tx_packet[0]);
   // XOR each byte in the packet with the previous byte:
   for (i = 0; i < nbytes; i++) {
     checksum ^= tx_packet[i];
@@ -121,7 +120,8 @@ static uint8_t gen_checksum(uint8_t *tx_packet) { // generate checksum based on 
 //*****************************************************************************
 uint8_t set_copley_mode(uint8_t copley_mode) {
   uint8_t checksum = 0;
-  uint8_t tx_packet[HEADER_LEN + 2] = {};
+  uint8_t tx_packet[HEADER_LEN + 4];
+  uint8_t i = 0; // TO-DO: delete this later
 
   // header:
   tx_packet[0] = COPLEY_NODE_NUMBER;
@@ -136,21 +136,49 @@ uint8_t set_copley_mode(uint8_t copley_mode) {
   tx_packet[7] = copley_mode;
 
   // calculate checksum:
-  checksum = gen_checksum(tx_packet)
+  checksum = gen_checksum(tx_packet,sizeof(tx_packet)/sizeof(tx_packet[0]));
   tx_packet[1] = checksum;
+
+  // TO-DO: send the command...
+  UARTprintf("Send: 0x");
+  for(i = 0; i < (sizeof(tx_packet)/sizeof(tx_packet[0])); i++)
+  {
+      UARTprintf("%02X ", tx_packet[i]);
+  }
+  UARTprintf("\n");
+
+  return 0; // TO-DO: receive, process, and return response from Copley Accelus
+
 }
 
 uint8_t get_copley_mode(void) {
   uint8_t checksum = 0;
-  uint8_t tx_packet[HEADER_LEN + 2] = {};
+  uint8_t tx_packet[HEADER_LEN + 2];
+  uint8_t i = 0;
+
+  // header:
   tx_packet[0] = COPLEY_NODE_NUMBER;
   tx_packet[1] = checksum; // checksum is still 0 at this point, it will change later
   tx_packet[2] = 1; // 1 16-bit word will follow header
   tx_packet[3] = OPCODE_GET_VAR_VAL;
+
+  // body:
   tx_packet[4] = 0;
   tx_packet[5] = 0x24; // register to read from: "desired state" (see Parameter Dictionary)
-  checksum = gen_checksum(tx_packet)
+
+  // calculate checksum:
+  checksum = gen_checksum(tx_packet, sizeof(tx_packet)/sizeof(tx_packet[0]));
   tx_packet[1] = checksum;
+
+  // TO-DO: send the command...
+  UARTprintf("Send: 0x");
+  for(i = 0; i < (sizeof(tx_packet)/sizeof(tx_packet[0])); i++)
+  {
+      UARTprintf("%02X ", tx_packet[i]);
+  }
+  UARTprintf("\n");
+
+  return 0; // TO-DO: receive, process, and return response from Copley Accelus
 }
 
 uint8_t set_current_mA(int16_t cur_ref_mA) {
