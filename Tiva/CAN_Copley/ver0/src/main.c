@@ -307,6 +307,10 @@ main(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
     GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
+    if (init_copley()) {
+      UARTprintf("Failed to initialize Copley Accelus.\n");
+    }
+
     //
     // For this example CAN0 is used with RX and TX pins on port B4 and B5.
     // The actual port and pins used may be different on your part, consult
