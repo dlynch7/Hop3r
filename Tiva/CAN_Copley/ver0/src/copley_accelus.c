@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include "copley_accelus.h"
+#include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "driverlib/gpio.h"
 #include "driverlib/pin_map.h"
@@ -93,6 +94,18 @@
 // Private functions (used only in copley_accelus.c):
 //
 //*****************************************************************************
+static uint8_t init_UART1(void) { // set up UART 1 to communicate with Copley Accelus
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+  GPIOPinConfigure(GPIO_PB0_U1RX);
+  GPIOPinConfigure(GPIO_PB1_U1TX);
+  GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+  while(!SysCtlPeripheralReady(SYSCTL_PERIPH_UART1)) {;} // WAIT FOR UART 1 module to be ready
+  // Initialzie the UART. Set baud rate, number of data bits, stop bits, parity, "stick mode" (?):
+  UARTConfigSetExpClk(UART1_BASE, SysCtlClockGet(), 9600, (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  return 0;
+}
+
 static uint8_t gen_checksum(uint8_t *tx_packet, uint8_t nbytes) { // generate checksum based on packet
   // from https://youtu.be/hGEtd86k3dU
   uint8_t i = 0;
@@ -126,6 +139,16 @@ static uint8_t gen_checksum(uint8_t *tx_packet, uint8_t nbytes) { // generate ch
 // Public functions (available to other files via copley_accelus.h):
 //
 //*****************************************************************************
+uint8_t init_copley(void) {
+  // initialize serial communication with Copley Accelus:
+  if (init_UART1()) {
+    UARTprintf("Failed to establish serial communication with Copley Accelus.\n");
+  }
+
+  // TODO: Initialize Copley Accelus in a safe operating mode
+  return 0;
+}
+
 uint8_t set_copley_mode(uint8_t copley_mode) {
   uint8_t checksum = 0;
   uint8_t tx_packet[HEADER_LEN + 4];
@@ -192,7 +215,7 @@ uint8_t get_copley_mode(void) {
 uint8_t set_current_mA(int16_t cur_ref_mA) {
   uint8_t checksum = 0;
   uint8_t tx_packet[HEADER_LEN + 4];
-  uint8_t i = 0; // TO-DO: delete this later
+  uint8_t i = 0;
 
   // header:
   tx_packet[0] = COPLEY_NODE_NUMBER;
@@ -211,6 +234,9 @@ uint8_t set_current_mA(int16_t cur_ref_mA) {
   tx_packet[1] = checksum;
 
   // TO-DO: send the command...
+  for (i = 0; i < (sizeof(tx_packet)/sizeof(tx_packet[0])); i++) {
+      // UARTsend()
+  }
   // UARTprintf("Send: 0x");
   // for(i = 0; i < (sizeof(tx_packet)/sizeof(tx_packet[0])); i++)
   // {
