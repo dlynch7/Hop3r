@@ -8,6 +8,8 @@
 // Author: Dan Lynch
 // Begun 4/12/18
 
+uint8_t init_copley(void);
+
 uint8_t set_copley_mode(uint8_t copley_mode);
 uint8_t get_copley_mode(void);
 
