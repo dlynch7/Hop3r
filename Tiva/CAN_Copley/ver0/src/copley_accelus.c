@@ -96,7 +96,7 @@
 //*****************************************************************************
 static uint8_t init_UART1(void) { // set up UART 1 to communicate with Copley Accelus
   SysCtlPeripheralEnable(SYSCTL_PERIPH_UART1);
-  SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
   GPIOPinConfigure(GPIO_PB0_U1RX);
   GPIOPinConfigure(GPIO_PB1_U1TX);
   GPIOPinTypeUART(GPIO_PORTB_BASE, GPIO_PIN_0 | GPIO_PIN_1);
@@ -144,6 +144,9 @@ uint8_t init_copley(void) {
   if (init_UART1()) {
     UARTprintf("Failed to establish serial communication with Copley Accelus.\n");
   }
+  // else {
+  //   UARTprintf("Initialized serial communication with Copley Accelus.\n");
+  // }
 
   // TODO: Initialize Copley Accelus in a safe operating mode
   return 0;
