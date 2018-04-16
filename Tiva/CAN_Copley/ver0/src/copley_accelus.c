@@ -144,9 +144,10 @@ uint8_t init_copley(void) {
   if (init_UART1()) {
     UARTprintf("Failed to establish serial communication with Copley Accelus.\n");
   }
-  // else {
-  //   UARTprintf("Initialized serial communication with Copley Accelus.\n");
-  // }
+  else {
+    UARTprintf("Initialized serial communication with Copley Accelus.\n");
+    UARTCharPut(UART1_BASE, '!');
+  }
 
   // TODO: Initialize Copley Accelus in a safe operating mode
   return 0;
