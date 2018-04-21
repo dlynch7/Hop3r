@@ -51,6 +51,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
+#include "driverlib/ssi.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/systick.h"
 #include "driverlib/timer.h"
@@ -63,7 +64,7 @@
 #define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
-#define POS_CTRL_FREQ 1000 // TODO: revert to 1000
+#define POS_CTRL_FREQ 1 // TODO: revert to 1000
 
 #define PI 3.14159
 
@@ -74,8 +75,10 @@
 //*****************************************************************************
 typedef enum {IDLE, CUR_CTRL, POS_CTRL} mode; // define data structure containing modes
 volatile mode MODE;
-uint32_t CUR_REF = 0;
-uint32_t POS_REF = 0;
+uint8_t CUR_REF = 0;
+int16_t POS_REF = 0;
+
+uint8_t TABLE_CUR_REF[4] = {0,200,0,200};
 
 //*****************************************************************************
 //
@@ -134,6 +137,7 @@ InitConsole(void)
 void
 MotorControllerIntHandler(void)
 {
+    static uint8_t index = 0;
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
     switch (MODE) {
       case IDLE:
@@ -143,7 +147,13 @@ MotorControllerIntHandler(void)
       }
       case CUR_CTRL:
       {
+        CUR_REF = TABLE_CUR_REF[index];
         set_current_mA(CUR_REF);
+        index++;
+        if (index>=4) {
+          index=0;
+        }
+        UARTprintf("Set current to %d mA.\n",CUR_REF);
         break;
       }
       case POS_CTRL:
@@ -364,13 +374,15 @@ main(void)
     // 8000000.  Consult the data sheet for more information about CAN
     // peripheral clocking.
     //
+    uint32_t canbitrate_actual;
 #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 5000); // 5 kHz lulz
+    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 5000); // 5 kHz lulz
 #endif
+    UARTprintf("CAN bit rate set at %d bps.\n", canbitrate_actual);
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static
@@ -419,14 +431,12 @@ main(void)
     sCANMessage.ui32MsgID = 0x4001; // used for commanded position
     CANMessageSet(CAN0_BASE, 2, &sCANMessage, MSG_OBJ_TYPE_RX);
 
-    set_copley_mode(1);
-    get_copley_mode();
+    // set_copley_mode(1);
+    // get_copley_mode();
     MODE = CUR_CTRL;
-    set_current_mA(CUR_REF);
-    // set_current_mA(32767);
+    set_current_mA(0);
 
     UARTprintf("Motor 1 node up!\n");
-    UARTprintf("SysCtlClockGet() = %d\n",SysCtlClockGet());
 
     //
     // Enter loop to process received messages.  This loop just checks a flag
