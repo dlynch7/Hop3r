@@ -251,7 +251,7 @@ void
 SimpleShortDelay(void)
 {
     //
-    // Delay cycles for 1 second
+    // Delay cycles for 0.1 second
     //
     SysCtlDelay(1600000 / 3);
 }
@@ -420,8 +420,8 @@ main(void)
     InitI2C0();
     UARTprintf("I2C0 initialized!\n");
 
-    int16_t Ax = 0;
-    int16_t Ay = 0;
+    // int16_t Ax = 0;
+    // int16_t Ay = 0;
     int16_t Az = 0;
     uint8_t whoiam = 0;
 
@@ -481,13 +481,15 @@ main(void)
     // 8000000.  Consult the data sheet for more information about CAN
     // peripheral clocking.
     //
+    uint32_t canbitrate_actual;
 #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 5000); // 5 kHz lulz
+    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000); // 5 kHz lulz
 #endif
+    UARTprintf("CAN bit rate set at %d bps.\n", canbitrate_actual);
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static
@@ -556,8 +558,8 @@ main(void)
     while(1)
     {
 
-        Ax = getxXL();
-        Ay = getyXL();
+        // Ax = getxXL();
+        // Ay = getyXL();
         Az = getzXL();
         whoiam = WhoAmI();
         UARTprintf("WhoAmI: %d zXL: %d\n",whoiam, Az);
