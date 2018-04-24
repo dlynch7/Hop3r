@@ -1,0 +1,23 @@
+This is a guide for programming the Hopp3r custom Tiva MCU boards using a TM4C123G Launchpad.
+
+On the Launchpad, remove the 2-pin power jumper on the ICDI part of the board.
+
+Then, make sure the power switch on the Launchpad is set to "Debug".
+
+Lastly, connect the L-shaped end of the blue programming cable to the header pins
+on the rear of the ICDI part of the board. The "L" shape of the headers on the cable
+and the Launchpad will match.
+
+On the custom board, insert the single-row end of the blue programming cable into the
+7-pin row of female headers. Notice that the pins of the blue programming cable are grouped
+with heat-shrink into two groups of two pins, and one group of three pins. The outside pin
+in the group of three should connect to pin 7 on the custom board. In the case the pin on the
+board is not labelled, the outside pin of the group of three should be connected to the RESET
+signal.
+
+The custom board should be connected to a +5V power supply and have a common ground with the
+Launchpad board being used as a programmer.
+
+Once these steps have been completed, the custom board can be programmed in exactly the same
+manner as programming a single Launchpad board. Also, in this setup, the non-ICDI MCU on the 
+Launchpad board being used a programmer will not receive any new code.
