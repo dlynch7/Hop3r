@@ -380,7 +380,7 @@ main(void)
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 5000); // 5 kHz lulz
+    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000); // 5 kHz lulz
 #endif
     UARTprintf("CAN bit rate set at %d bps.\n", canbitrate_actual);
 
