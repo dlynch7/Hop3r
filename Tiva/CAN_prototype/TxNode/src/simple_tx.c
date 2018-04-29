@@ -42,7 +42,9 @@
 #include "inc/hw_can.h"
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
+#include "inc/hw_types.h"
 #include "driverlib/can.h"
+#include "driverlib/fpu.h"
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
@@ -50,8 +52,8 @@
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
 
-#define LED_RED GPIO_PIN_1
-#define LED_BLUE GPIO_PIN_2
+#define LED_RED GPIO_PIN_2
+//#define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
 //*****************************************************************************
@@ -126,28 +128,27 @@ InitConsole(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
     //
+    // Enable UART0 so that we can configure the clock.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+
+    //
     // Configure the pin muxing for UART0 functions on port A0 and A1.
     // This step is not necessary if your part does not support pin muxing.
     // TODO: change this to select the port/pin you are using.
     //
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
-
-    //
-    // Enable UART0 so that we can configure the clock.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-
-    //
-    // Use the internal 16MHz oscillator as the UART clock source.
-    //
-    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
-
     //
     // Select the alternate (UART) function for these pins.
     // TODO: change this to select the port/pin you are using.
     //
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    //
+    // Use the internal 16MHz oscillator as the UART clock source.
+    //
+    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
 
     //
     // Initialize the UART for console I/O.
@@ -180,7 +181,9 @@ void
 CANIntHandler(void)
 {
     uint32_t ui32Status;
-		GPIOPinWrite(GPIO_PORTF_BASE, LED_RED|LED_GREEN|LED_BLUE, LED_RED);
+		GPIOPinWrite(GPIO_PORTD_BASE, LED_RED|LED_GREEN, LED_RED);
+
+    UARTprintf("Entered interrupt...\n");
     //
     // Read the CAN interrupt status to find the cause of the interrupt
     //
@@ -204,6 +207,8 @@ CANIntHandler(void)
         //
         ui32Status = CANStatusGet(CAN0_BASE, CAN_STS_CONTROL);
         echoCanControllerStatus = ui32Status;
+
+        UARTprintf("Error...\n");
 
         //
         // Set a flag to indicate some errors may have occurred.
@@ -231,6 +236,8 @@ CANIntHandler(void)
         //
         g_ui32MsgCount++;
 
+        UARTprintf("Message sent...\n");
+
         //
         // Since the message was sent, clear any error flags.
         //
@@ -246,9 +253,10 @@ CANIntHandler(void)
         //
         // Spurious interrupt handling can go here.
         //
+        UARTprintf("unexpected interrupt...\n");
     }
 
-		GPIOPinWrite(GPIO_PORTF_BASE, LED_RED|LED_GREEN|LED_BLUE, 0);
+		GPIOPinWrite(GPIO_PORTD_BASE, LED_RED|LED_GREEN, 0);
 }
 
 //*****************************************************************************
@@ -259,11 +267,13 @@ CANIntHandler(void)
 int
 main(void)
 {
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+/*#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     uint32_t ui32SysClock;
-#endif
+#endif */
+
+    FPULazyStackingEnable();
 
     tCANMsgObject sCANMessage;
     uint32_t ui32MsgData;
@@ -276,7 +286,7 @@ main(void)
     // TODO: The SYSCTL_XTAL_ value must be changed to match the value of the
     // crystal on your board.
     //
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
@@ -286,7 +296,15 @@ main(void)
 #else
     SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
                    SYSCTL_XTAL_16MHZ);
-#endif
+#endif */
+    SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
+                   SYSCTL_OSC_MAIN);
+
+
+    // Tx: light up RED LED on message, green for power
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, LED_RED|LED_GREEN);
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_GREEN, LED_GREEN);
 
     //
     // Set up the serial console to use for displaying messages.  This is
@@ -347,13 +365,15 @@ main(void)
     // 8000000.  Consult the data sheet for more information about CAN
     // peripheral clocking.
     //
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
     CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
-#endif
+#endif */
+
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static
@@ -376,6 +396,8 @@ main(void)
     //
     CANEnable(CAN0_BASE);
 
+    UARTprintf("Tx node up!\n");
+
     //
     // Initialize the message object that will be used for sending CAN
     // messages.  The message will be 4 bytes that will contain an incrementing
@@ -387,9 +409,6 @@ main(void)
     sCANMessage.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
     sCANMessage.ui32MsgLen = sizeof(pui8MsgData);
     sCANMessage.pui8MsgData = pui8MsgData;
-
-		SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
 		//
     // Enter loop to send messages.  A new message will be sent once per
@@ -451,6 +470,8 @@ main(void)
             //
             UARTprintf(" total count = %u\n", g_ui32MsgCount);
         }
+
+        UARTprintf("\n\n");
 
         //
         // Increment the value in the message data.

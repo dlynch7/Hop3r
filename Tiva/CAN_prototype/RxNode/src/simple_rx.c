@@ -44,6 +44,7 @@
 #include "inc/hw_memmap.h"
 #include "inc/hw_types.h"
 #include "driverlib/can.h"
+#include "driverlib/fpu.h"
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
@@ -51,8 +52,8 @@
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
 
-#define LED_RED GPIO_PIN_1
-#define LED_BLUE GPIO_PIN_2
+#define LED_RED GPIO_PIN_2
+//#define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
 //*****************************************************************************
@@ -130,28 +131,27 @@ InitConsole(void)
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
     //
+    // Enable UART0 so that we can configure the clock.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+
+    //
     // Configure the pin muxing for UART0 functions on port A0 and A1.
     // This step is not necessary if your part does not support pin muxing.
     // TODO: change this to select the port/pin you are using.
     //
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
-
-    //
-    // Enable UART0 so that we can configure the clock.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
-
-    //
-    // Use the internal 16MHz oscillator as the UART clock source.
-    //
-    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
-
     //
     // Select the alternate (UART) function for these pins.
     // TODO: change this to select the port/pin you are using.
     //
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
+
+    //
+    // Use the internal 16MHz oscillator as the UART clock source.
+    //
+    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
 
     //
     // Initialize the UART for console I/O.
@@ -170,7 +170,9 @@ void
 CANIntHandler(void)
 {
     uint32_t ui32Status;
-    GPIOPinWrite(GPIO_PORTF_BASE, LED_RED|LED_GREEN|LED_BLUE, LED_GREEN);
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_RED|LED_GREEN, LED_GREEN);
+
+    UARTprintf("Entered interrupt...\n");
     //
     // Read the CAN interrupt status to find the cause of the interrupt
     //
@@ -191,6 +193,8 @@ CANIntHandler(void)
         //
         ui32Status = CANStatusGet(CAN0_BASE, CAN_STS_CONTROL);
         echoCanControllerStatus = ui32Status;
+
+        UARTprintf("Error...\n");
 
         //
         // Set a flag to indicate some errors may have occurred.
@@ -218,6 +222,8 @@ CANIntHandler(void)
         //
         g_ui32MsgCount++;
 
+        UARTprintf("Message received...\n");
+
         //
         // Set flag to indicate received message is pending.
         //
@@ -238,8 +244,10 @@ CANIntHandler(void)
         //
         // Spurious interrupt handling can go here.
         //
+        UARTprintf("unexpected interrupt...\n");
     }
-    GPIOPinWrite(GPIO_PORTF_BASE, LED_RED|LED_GREEN|LED_BLUE, 0);
+    
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_RED|LED_GREEN, 0);
 }
 
 //*****************************************************************************
@@ -250,11 +258,13 @@ CANIntHandler(void)
 int
 main(void)
 {
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     uint32_t ui32SysClock;
-#endif
+#endif */
+
+    FPULazyStackingEnable();
 
     tCANMsgObject sCANMessage;
     uint8_t pui8MsgData[8];
@@ -264,7 +274,7 @@ main(void)
     // TODO: The SYSCTL_XTAL_ value must be changed to match the value of the
     // crystal used on your board.
     //
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
@@ -274,17 +284,23 @@ main(void)
 #else
     SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
                    SYSCTL_XTAL_16MHZ);
-#endif
+#endif */
+    //
+    // Set the clocking to run directly from the crystal.
+    //
+    SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
+                       SYSCTL_OSC_MAIN);
+
+    // Rx: light up GREEN LED on message, red for power
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, LED_RED|LED_GREEN);
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_RED, LED_RED);
 
     //
     // Set up the serial console to use for displaying messages.  This is
     // just for this example program and is not needed for CAN operation.
     //
     InitConsole();
-
-    // Rx: light up GREEN LED
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
     //
     // For this example CAN0 is used with RX and TX pins on port B4 and B5.
@@ -339,13 +355,15 @@ main(void)
     // 8000000.  Consult the data sheet for more information about CAN
     // peripheral clocking.
     //
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
     CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
-#endif
+#endif */
+
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static

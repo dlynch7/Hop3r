@@ -31,6 +31,10 @@ unsigned char WhoAmI(void) {
   return I2CReceive(IMU_ADDR, WHOAMI);
 }
 
+unsigned char WhoAmI2(uint8_t address) {
+  return I2CReceive(address, WHOAMI);
+}
+
 uint16_t ReadIMU(uint8_t reg)
 {
     uint8_t accelDataL =  I2CReceive(IMU_ADDR, reg);
