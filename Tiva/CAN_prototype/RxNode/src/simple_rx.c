@@ -172,7 +172,7 @@ CANIntHandler(void)
     uint32_t ui32Status;
     GPIOPinWrite(GPIO_PORTD_BASE, LED_RED|LED_GREEN, LED_GREEN);
 
-    UARTprintf("Entered interrupt...\n");
+    //UARTprintf("Entered interrupt...\n");
     //
     // Read the CAN interrupt status to find the cause of the interrupt
     //
@@ -194,7 +194,7 @@ CANIntHandler(void)
         ui32Status = CANStatusGet(CAN0_BASE, CAN_STS_CONTROL);
         echoCanControllerStatus = ui32Status;
 
-        UARTprintf("Error...\n");
+        //UARTprintf("Error...\n");
 
         //
         // Set a flag to indicate some errors may have occurred.
@@ -222,7 +222,7 @@ CANIntHandler(void)
         //
         g_ui32MsgCount++;
 
-        UARTprintf("Message received...\n");
+        //UARTprintf("Message received...\n");
 
         //
         // Set flag to indicate received message is pending.
@@ -244,7 +244,7 @@ CANIntHandler(void)
         //
         // Spurious interrupt handling can go here.
         //
-        UARTprintf("unexpected interrupt...\n");
+        //UARTprintf("unexpected interrupt...\n");
     }
 
     GPIOPinWrite(GPIO_PORTD_BASE, LED_RED|LED_GREEN, 0);
@@ -258,13 +258,13 @@ CANIntHandler(void)
 int
 main(void)
 {
-/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     uint32_t ui32SysClock;
-#endif */
+#endif
 
-    FPULazyStackingEnable();
+    //FPULazyStackingEnable();
 
     tCANMsgObject sCANMessage;
     uint8_t pui8MsgData[8];
@@ -274,7 +274,7 @@ main(void)
     // TODO: The SYSCTL_XTAL_ value must be changed to match the value of the
     // crystal used on your board.
     //
-/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     ui32SysClock = SysCtlClockFreqSet((SYSCTL_XTAL_25MHZ |
@@ -284,12 +284,12 @@ main(void)
 #else
     SysCtlClockSet(SYSCTL_SYSDIV_1 | SYSCTL_USE_OSC | SYSCTL_OSC_MAIN |
                    SYSCTL_XTAL_16MHZ);
-#endif */
+#endif
     //
     // Set the clocking to run directly from the crystal.
     //
-    SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
-                       SYSCTL_OSC_MAIN);
+  //  SysCtlClockSet(SYSCTL_SYSDIV_4 | SYSCTL_USE_PLL | SYSCTL_XTAL_16MHZ |
+    //                   SYSCTL_OSC_MAIN);
 
     // Rx: light up GREEN LED on message, red for power
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
@@ -309,7 +309,7 @@ main(void)
     // GPIO port B needs to be enabled so these pins can be used.
     // TODO: change this to whichever GPIO port you are using
     //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 
     //
     // Configure the GPIO pin muxing to select CAN0 functions for these pins.
@@ -318,8 +318,8 @@ main(void)
     // Consult the data sheet to see which functions are allocated per pin.
     // TODO: change this to select the port/pin you are using
     //
-    GPIOPinConfigure(GPIO_PB4_CAN0RX);
-    GPIOPinConfigure(GPIO_PB5_CAN0TX);
+    GPIOPinConfigure(GPIO_PE4_CAN0RX);
+    GPIOPinConfigure(GPIO_PE5_CAN0TX);
 
     //
     // Enable the alternate function on the GPIO pins.  The above step selects
@@ -327,7 +327,7 @@ main(void)
     // alternate function instead of GPIO for these pins.
     // TODO: change this to match the port/pin you are using
     //
-    GPIOPinTypeCAN(GPIO_PORTB_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPinTypeCAN(GPIO_PORTE_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
     //
     // The GPIO port and pins have been set up for CAN.  The CAN peripheral
@@ -355,15 +355,15 @@ main(void)
     // 8000000.  Consult the data sheet for more information about CAN
     // peripheral clocking.
     //
-/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
-#endif */
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 999999); // 500 kHz
+#endif
 
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 200000); // 50 kHz
+  //  CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 200000); // 50 kHz
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static
