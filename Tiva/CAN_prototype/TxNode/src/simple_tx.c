@@ -373,7 +373,7 @@ main(void)
     CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
 #endif */
 
-    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 50000); // 50 kHz
+    CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 200000); // 50 kHz
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static
