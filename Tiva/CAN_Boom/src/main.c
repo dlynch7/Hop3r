@@ -46,9 +46,12 @@
 //
 //*****************************************************************************
 
+// Standard C includes:
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+
+// Tivaware includes:
 #include "inc/hw_can.h"
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
@@ -87,7 +90,7 @@
 //
 //*****************************************************************************
 tCANMsgObject sCANMessage;
-volatile uint32_t ui32MsgData;
+uint32_t ui32MsgData;
 uint8_t *pui8MsgData;
 
 //*****************************************************************************
@@ -182,7 +185,6 @@ BoomReadIntHandler(void)
 
     angleDeg10 = (3600*pui32DataRx[0]/16384.0f);
 
-    UARTprintf("Angle (raw): %d\n", pui32DataRx[0]);
     UARTprintf("Angle (degrees): %d.%01d\n", angleDeg10/10,angleDeg10%10);
 
     (*(uint32_t *)pui8MsgData) = angleDeg10;
