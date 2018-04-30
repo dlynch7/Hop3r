@@ -86,9 +86,6 @@
 // Global variables shared between main loop and motor control ISR
 //
 //*****************************************************************************
-int16_t angleDeg = 0;
-int16_t angleRad = 0;
-
 tCANMsgObject sCANMessage;
 volatile uint32_t ui32MsgData;
 uint8_t *pui8MsgData;
@@ -156,6 +153,8 @@ SimpleDelay(void)
 void
 BoomReadIntHandler(void)
 {
+    int16_t angleDeg10 = 0;
+
     static uint32_t pui32DataTx[NUM_SSI_DATA];
     static uint32_t pui32DataRx[NUM_SSI_DATA];
 
@@ -181,17 +180,17 @@ BoomReadIntHandler(void)
 
     pui32DataRx[0] &= 0x3FFF; // mask to 14-bit encoder output, per AEAT-6600 datasheet
 
-    angleRad = ((float) 360*pui32DataRx[0]/16384.0f);
+    angleDeg10 = (3600*pui32DataRx[0]/16384.0f);
 
     UARTprintf("Angle (raw): %d\n", pui32DataRx[0]);
-    UARTprintf("Angle (degrees): %d\n", ((int) angleRad));
+    UARTprintf("Angle (degrees): %d.%01d\n", angleDeg10/10,angleDeg10%10);
 
-    (*(uint32_t *)pui8MsgData) = ((int) angleRad);
+    (*(uint32_t *)pui8MsgData) = angleDeg10;
 
     // Print a message to the console showing the message count and the
     // contents of the message being sent.
     //
-    UARTprintf("Sending msg: 0x%02X %02X %02X %02X",
+    UARTprintf("Sending msg: 0x%02X %02X %02X %02X\n",
                pui8MsgData[0], pui8MsgData[1], pui8MsgData[2],
                pui8MsgData[3]);
 
