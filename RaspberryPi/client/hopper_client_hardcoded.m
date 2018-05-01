@@ -1,4 +1,4 @@
-function hopper_client(port)
+function hopper_client_hardcoded(port)
 
 %     port='/dev/ttyUSB1';
     if ~isempty(instrfind)
@@ -6,25 +6,41 @@ function hopper_client(port)
         delete(instrfind);
     end
     fprintf('Opening port  %s....\n',port);
-%     mySerial = serial(port, 'BaudRate', 115200, 'FlowControl', 'hardware','Timeout',10); 
     mySerial = serial(port, 'BaudRate', 115200,'Timeout',10); 
 
-    fopen(mySerial);
-    nsamples = fscanf(mySerial,'%d');
+%     Commenting out for testing without hardware
+%     fopen(mySerial);
+    nsamples = 1024; % fscanf(mySerial,'%d');
     fprintf('Expecting  %d....\n',nsamples);
-    fprintf(mySerial,'1\n');
-    data = zeros(nsamples); 
+%     fprintf(mySerial,'1\n');
+%     data = zeros(nsamples); 
+        data=zeros(nsamples,3);
     
-
+%     
+% Data to be read Boom encoderx3
+%                 Motor anglesX3
+%                 Joint angleX6
+%                 Actual Current
+%                 Commanded Current
+%                 x,y,angle of foot
+%                 commanded Position
+%                 Force Sensor reading
+%                 IMU Reading
       for i=1:nsamples
-          data(i) = fscanf(mySerial,'%d'); 
-          fprintf('%d....\n',data(i));   
+          data(i,:) = [i,i+1,i*i];%fscanf(mySerial,'%d'); 
+          fprintf('%d %d %d....\n',data(i,1),data(i,2),data(i,3));
+%           fprintf('%d %d %d....\n',data[i,0],data[i,1],data[i,2]);  
+          pause(0.01);%  for testing without hardware
+          
       end
+      x=data(:,2);
+      y=data(:,3);
+      plot(x,y)
       
-    clean = onCleanup(@()fclose(mySerial)); 
+%     clean = onCleanup(@()fclose(mySerial)); 
 
     has_quit = false;
-    has_quit = True;%For testing without menu
+    has_quit = true;%For testing without menu
     
     % menu loop
     while ~has_quit
