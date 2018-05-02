@@ -7,7 +7,7 @@
 #include "circ_buffer.h"
 
 static volatile uint16_t read = 0, write = 0;	// circ buffer indices
-static volatile uint16_t data_buf[BUFLEN];  // array that stores the data
+static volatile uint16_t data_buf[BUFLEN][3];  // array that stores the data
 
 uint16_t get_read_index(void) { // return the value of the read index
 	return read;
@@ -24,19 +24,22 @@ uint8_t buffer_full(void) { // return true if the buffer is full
 	return ((write + 1) % BUFLEN) == read;
 }
 
-uint16_t buffer_read(void) { // reads from current buffer index
+void buffer_read(uint16_t *data_out) { // reads from current buffer index
 	// assumes buffer not empty
-	uint16_t val = data_buf[read];
+	data_out[0] = data_buf[read][0];
+	data_out[1] = data_buf[read][1];
+	data_out[2] = data_buf[read][2];
 	++read;
 	if(read >= BUFLEN) { // wraparound
 		read = 0;
 	}
-	return val;
 }
 
-void buffer_write(uint16_t data) { // change the buffer value indexed by "write"
+void buffer_write(uint16_t data1, uint16_t data2, uint16_t data3) { // change the buffer value indexed by "write"
 	if(!buffer_full()) { // if the buffer is full, the data is lost
-		data_buf[write] = data;
+		data_buf[write][0] = data1;
+		data_buf[write][1] = data2;
+		data_buf[write][2] = data3;
 		++write;
 		if(write >= BUFLEN) { // wraparound
 			write = 0;
