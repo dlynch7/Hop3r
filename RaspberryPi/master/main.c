@@ -56,9 +56,12 @@
  */
 
 #include <errno.h>
+#include <fcntl.h>
 #include <linux/can.h>
 #include <linux/can/raw.h>
+#include <math.h>
 #include <net/if.h>
+// #include <poll.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
@@ -67,6 +70,7 @@
 #include <string.h>
 #include <sys/ioctl.h>
 #include <sys/types.h>	// needed for getpid()
+// #include <termios.h>
 #include <time.h>
 #include <unistd.h>			// needed for getpid()
 #include <wiringPi.h>
@@ -74,11 +78,13 @@
 
 #include "linux-can-utils/lib.h"
 #include "circ_buffer.h"
-#include "kinematic.h"
+// #include "kinematic.h"
 #include "per_threads.h"
 
-#define CAN_PERIOD_US 20000
-#define UART_PERIOD_US 50000
+#define CAN_PERIOD_US 2000
+#define UART_PERIOD_US 2000
+
+#define PI 3.14159
 
 void *CAN_thread();
 void *UART_thread();
@@ -87,16 +93,76 @@ uint8_t CAN_thread_begin; // read and write threads must wait for begin = 1
 uint8_t UART_thread_begin; // read and write threads must wait for begin = 1
 int serial_port;
 char writemsg[10] = {};
+int16_t amp = 0;
+uint8_t amptemp = 0;
+
+int16_t refTraj[BUFLEN] = {};
 
 int main(void) {
   int rc1, rc2;
+  uint16_t readTrajCount = 0;
   uint8_t writePermission = 0;
+  uint8_t runPermission = 0;
   int startwait;
 
   CAN_thread_begin = 0; // reading and writing cannot commence
   UART_thread_begin = 0; // reading and writing cannot commence
 
   printf("This is the main function.\n");
+
+  /////////////////////////////////////////////
+  // Trying to do serial comm the POSIX way
+
+  // // open the serial port:
+  // int serial_fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
+  // if (serial_fd < 0 || !isatty(serial_fd)) {
+  //     // errno will be set
+  // }
+  //
+  // // wait, then flush the OS's buffer on the serial port:
+  // usleep(250000);
+  // tcflush(serial_fd, TCIOFLUSH);
+  //
+  // // configure the serial port:
+  // struct termios serialSet;
+  // memset(&serialSet, 0, sizeof(serialSet));
+  // serialSet.c_iflag = IGNBRK;
+  // serialSet.c_cflag = CS8 | CREAD | CLOCAL;
+  // serialSet.c_lflag |= (ICANON | ECHO | ECHOE);
+  // memset(serialSet.c_cc, _POSIX_VDISABLE, NCCS);
+  // serialSet.c_cc[VMIN] = 0;
+  // serialSet.c_cc[VTIME] = 0;
+  //
+  // // indicate the speed on the serial port:
+  // speed_t baudRate = B115200;
+  // cfsetispeed(&serialSet, baudRate);
+  // cfsetospeed(&serialSet, baudRate);
+  //
+  // // associate the struct with the serial port:
+  // if (tcsetattr(serial_fd, TCSANOW, &serialSet) == -1) {
+  //   // errno will be set
+  // }
+
+  // char outbuf[] = "hello world";
+  // char inbuf[10] = "";
+  // dprintf(serial_fd,"%s\r\n",outbuf);
+
+  // struct pollfd src;
+  // src.fd = serial_fd;
+  // src.events = POLLIN;
+  // src.revents = 0;
+
+  // int check = poll(&src, 1, -1);
+  // printf("check = %d\n",check);
+
+  // fcntl(serial_fd, F_SETFL, 0);
+  // int check = read(serial_fd, inbuf, 10);
+  // printf("check = %d\n",check);
+
+  /////////////////////////////////////////////////
+
+  ////////////////////////////////////////////////
+  // Doing serial comm w/ wiringPi
 
   if ((serial_port = serialOpen("/dev/ttyS0", 115200)) < 0) // open serial port
 	{
@@ -111,9 +177,39 @@ int main(void) {
 	sprintf(writemsg,"%d\r\n",BUFLEN);
 	serialPuts(serial_port, writemsg);
 
-	writePermission = serialGetchar(serial_port);
-	printf("writePermission: %c\r\n",writePermission);
+  // ask client PC for permission to run:
+  runPermission = serialGetchar(serial_port);
+	printf("runPermission: %c\r\n",runPermission);
+	if (runPermission != '1') {
+		printf("Run permission denied by client.\r\n");
+		return 1;
+	}
 
+  serialFlush(serial_port); // clear junk
+  serialFlush(serial_port); // clear junk
+
+  // ask client for amplitude:
+  amptemp = serialGetchar(serial_port);
+  amp = 1000*(amptemp-48);
+  // amp = serialGetchar(serial_port);
+	printf("amplitude: %c\r\n",amptemp);
+
+  serialFlush(serial_port); // clear junk
+
+  // receive current profile from client PC:
+  for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
+    refTraj[readTrajCount] = amp*sin(2*PI*readTrajCount/500.0);
+    printf("%d\r\n",refTraj[readTrajCount]);
+  }
+
+  // // echo value of runPermission to client PC (ends a blocking read in the
+  // // client PC):
+  // sprintf(writemsg,"%c\r\n",runPermission);
+	// serialPuts(serial_port, writemsg);
+
+  // ask client PC for permission to write
+  writePermission = serialGetchar(serial_port);
+	printf("writePermission: %c\r\n",writePermission);
 	if (writePermission != '1') {
 		printf("Write permission denied by client.\r\n");
 		return 1;
@@ -202,7 +298,6 @@ void *CAN_thread() {
 	strcpy(ifr.ifr_name, "can0");
 	if (ioctl(s, SIOCGIFINDEX, &ifr) < 0) {
 		perror("\tSIOCGIFINDEX");
-    printf("\tSIOCGIFINDEX\n");
     // TO-DO: ERROR HANDLING
     return NULL;
 	}
@@ -253,7 +348,12 @@ void *CAN_thread() {
   while(!CAN_thread_begin) {;}
   make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
   for (k = 0; k < BUFLEN;) {
-    // read/write from/to the CAN bus:
+    // read from the CAN bus:
+    // pthread_mutex_lock(&mutex1);
+    //
+    // pthread_mutex_unlock(&mutex1);
+
+    // write to the CAN bus:
     frame.data[0] = (k & 0x00FF);
     frame.data[1] = (k & 0x0F00) >> 8;
     pthread_mutex_lock(&mutex1);
@@ -267,7 +367,7 @@ void *CAN_thread() {
     pthread_mutex_unlock(&mutex1);
     // put stuff in the circular buffer:
     pthread_mutex_lock(&mutex1);
-    buffer_write(k);
+    buffer_write(k,k,k);
     pthread_mutex_unlock(&mutex1);
     ++k;
     wait_period(&info);
@@ -279,7 +379,7 @@ void *CAN_thread() {
 
 void *UART_thread() {
   uint16_t j;
-  uint16_t bufferval;
+  uint16_t bufferval[3];
   struct periodic_info info;
 
   /****************************************************************************
@@ -291,19 +391,13 @@ void *UART_thread() {
   make_periodic(UART_PERIOD_US, &info); // period (1st argument) in microseconds
   for (j = 0; j < BUFLEN;) {
     pthread_mutex_lock(&mutex1);
-    bufferval = buffer_read();
+    buffer_read(bufferval);
     fflush(stdout);
-    sprintf(writemsg,"%d\r\n",bufferval);
+    sprintf(writemsg,"%d %d %d\r\n",bufferval[0],bufferval[1],bufferval[2]);
     serialPuts(serial_port, writemsg);
     ++j;
     pthread_mutex_unlock(&mutex1);
 
-    // delay(3);
-
-    // while(serialDataAvail(serial_port)) {
-    //   printf(" -> %3d", serialGetchar(serial_port));
-    //   fflush(stdout);
-    // }
     wait_period(&info);
   }
   printf("Read thread has completed.\n");

@@ -17,7 +17,7 @@ uint16_t get_read_index(void); // return the value of the read index
 uint16_t get_write_index(void);// return the value of the write index
 uint8_t buffer_empty(void); // return true if the buffer is empty (read=write)
 uint8_t buffer_full(void);  // return true if the buffer is full
-uint16_t buffer_read(void); // reads from current buffer index
-void buffer_write(uint16_t);// change the buffer value indexed by "write"
+void buffer_read(uint16_t *); // reads from current buffer index
+void buffer_write(uint16_t,uint16_t,uint16_t);// change the buffer value indexed by "write"
 
 #endif
