@@ -51,6 +51,7 @@
 #include "driverlib/gpio.h"
 #include "driverlib/interrupt.h"
 #include "driverlib/pin_map.h"
+#include "driverlib/pwm.h"
 #include "driverlib/ssi.h"
 #include "driverlib/sysctl.h"
 #include "driverlib/systick.h"
@@ -64,7 +65,8 @@
 #define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
-#define POS_CTRL_FREQ 1 // TODO: revert to 1000
+#define POS_CTRL_FREQ 1000 // TODO: revert to 1000
+#define MOTOR_ID 1
 
 #define PI 3.14159
 
@@ -149,13 +151,10 @@ MotorControllerIntHandler(void)
       }
       case CUR_CTRL:
       {
-        CUR_REF = TABLE_CUR_REF[index];
+        // CUR_REF = TABLE_CUR_REF[index];
+        CUR_REF = 1000;
         pulse_width = set_current_mA(CUR_REF);
-        index++;
-        if (index>=4) {
-          index=0;
-        }
-        UARTprintf("Set current i = %d to %d mA = %d pulse width.\n",index,CUR_REF,pulse_width);
+        UARTprintf("Set current to %d mA = %d pulse width.\n",index,CUR_REF,pulse_width);
         break;
       }
       case POS_CTRL:
@@ -489,8 +488,9 @@ main(void)
             // Print information about the message just received.
             //
             // PrintCANMessageInfo(&sCANMessage, 1);
-            CUR_REF = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
-            UARTprintf("CUR_REF: %d\n",CUR_REF);
+            CUR_REF = (((pui8MsgData[2*MOTOR_ID]) << 8) | pui8MsgData[2*MOTOR_ID - 1]);
+            // CUR_REF = 1000;
+            // UARTprintf("CUR_REF: %d\n",CUR_REF);
         }
 
         //
