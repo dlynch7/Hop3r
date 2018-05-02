@@ -354,8 +354,13 @@ void *CAN_thread() {
     // pthread_mutex_unlock(&mutex1);
 
     // write to the CAN bus:
-    frame.data[0] = (k & 0x00FF);
-    frame.data[1] = (k & 0x0F00) >> 8;
+    frame.data[0] = 0b00101011;
+    frame.data[1] = (refTraj[k] & 0x00FF);
+    frame.data[2] = (refTraj[k] & 0xFF00) >> 8;
+    frame.data[3] = (refTraj[k] & 0x00FF);
+    frame.data[4] = (refTraj[k] & 0xFF00) >> 8;
+    frame.data[5] = (refTraj[k] & 0x00FF);
+    frame.data[6] = (refTraj[k] & 0xFF00) >> 8;
     pthread_mutex_lock(&mutex1);
   	if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
   		perror("write");
