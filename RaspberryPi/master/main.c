@@ -324,7 +324,7 @@ void *CAN_thread() {
   printf("CAN socket set up complete!\n");
 
   /* parse bogus CAN frame */
-	if (parse_canframe("00003001#00000000", &frame)){
+	if (parse_canframe("00003001#0000000000000000", &frame)){
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		fprintf(stderr, "Try: <can_id>#{R|data}\n");
 		fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
@@ -372,7 +372,7 @@ void *CAN_thread() {
     pthread_mutex_unlock(&mutex1);
     // put stuff in the circular buffer:
     pthread_mutex_lock(&mutex1);
-    buffer_write(k,k,k);
+    buffer_write(refTraj[k],refTraj[k],refTraj[k]);
     pthread_mutex_unlock(&mutex1);
     ++k;
     wait_period(&info);
