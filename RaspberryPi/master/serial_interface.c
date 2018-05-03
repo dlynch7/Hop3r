@@ -55,17 +55,3 @@ void config_port(int fd) {
 
   tcsetattr(fd, TCSANOW, &options); // Set the new options for the port
 }
-
-int serial_write(int fd, char *buf, uint16_t length) {
-  uint16_t n;
-  char err_msg[50];
-
-  n = write(fd, buf, length);
-  if (n < 0) {
-    sprintf(err_msg,"write() of %d bytes failed!\n",length);
-    perror(err_msg);
-  }
-
-  return n;
-
-}

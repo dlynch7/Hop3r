@@ -85,6 +85,8 @@
 #define CAN_PERIOD_US 2000
 #define UART_PERIOD_US 2000
 
+#define INBUFLENGTH (sizeof(inbuf)/sizeof(inbuf[0]))
+
 #define PI 3.14159
 
 void *CAN_thread();
@@ -93,141 +95,78 @@ pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
 uint8_t CAN_thread_begin; // read and write threads must wait for begin = 1
 uint8_t UART_thread_begin; // read and write threads must wait for begin = 1
 int serial_port;
+char inbuf[100] = "";
 char writemsg[10] = {};
 int16_t amp = 0;
-uint8_t amptemp = 0;
+int amptemp = 0;
 
-int16_t refTraj[BUFLEN] = {};
+int refTraj[BUFLEN] = {};
 
 int main(void) {
   int rc1, rc2;
-  uint16_t readTrajCount = 0;
-  uint8_t writePermission = 0;
-  uint8_t runPermission = 0;
+  int readTrajCount = 0;
+  int writePermission = 0;
+  int runPermission = 0;
   int startwait;
 
   CAN_thread_begin = 0; // reading and writing cannot commence
   UART_thread_begin = 0; // reading and writing cannot commence
 
+  printf("Buffer read index: %d\n",get_read_index());
+  printf("Buffer write index: %d\n",get_write_index());
+
   printf("This is the main function.\n");
 
   /////////////////////////////////////////////
-  // Trying to do serial comm the POSIX way
-
+  // POSIX serial interface:
+  //
   // open the serial port:
   serial_port = open_port();
   printf("serial_port = %d\n",serial_port);
-
+  //
   config_port(serial_port);
-
-  // int temp;
-  //   // length = sizeof(buf)/sizeof(buf[0]);
-  // temp = serial_write(serial_port, "hello!\n",7);
-  // printf("serial_write() returned %d\n",temp);
-
-  // // wait, then flush the OS's buffer on the serial port:
+  //
+  dprintf(serial_port,"%d\n",BUFLEN);
+  //
+  read(serial_port, inbuf,INBUFLENGTH);
+  sscanf(inbuf,"%d\n",&runPermission);
+  printf("runPermission = %d\n",runPermission);
+  if (runPermission != 1) {
+    printf("Client denied permission to run.\n");
+    return 1;
+  }
+  //
+  // receive current profile from client PC:
+  for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
+    read(serial_port, inbuf,INBUFLENGTH);
+    sscanf(inbuf,"%d\n",&refTraj[readTrajCount]);
+    printf("%d %d\n",readTrajCount,refTraj[readTrajCount]);
+  }
+  //
+  printf("Done receiving\n");
   // usleep(250000);
-  // tcflush(serial_fd, TCIOFLUSH);
-  //
-  // // configure the serial port:
-  // struct termios serialSet;
-  // memset(&serialSet, 0, sizeof(serialSet));
-  // serialSet.c_iflag = IGNBRK;
-  // serialSet.c_cflag = CS8 | CREAD | CLOCAL;
-  // serialSet.c_lflag |= (ICANON | ECHO | ECHOE);
-  // memset(serialSet.c_cc, _POSIX_VDISABLE, NCCS);
-  // serialSet.c_cc[VMIN] = 0;
-  // serialSet.c_cc[VTIME] = 0;
-  //
-  // // indicate the speed on the serial port:
-  // speed_t baudRate = B115200;
-  // cfsetispeed(&serialSet, baudRate);
-  // cfsetospeed(&serialSet, baudRate);
-  //
-  // // associate the struct with the serial port:
-  // if (tcsetattr(serial_fd, TCSANOW, &serialSet) == -1) {
-  //   // errno will be set
+  // tcflush(serial_port, TCIOFLUSH);
+  // dprintf(serial_port,"%d\n",BUFLEN);
+  // ask client PC for permission to write
+  read(serial_port, inbuf,INBUFLENGTH);
+  sscanf(inbuf,"%d\n",&writePermission);
+  printf("writePermission = %d\n",writePermission);
+  if (writePermission != 1) {
+    printf("Client denied permission to write.\n");
+    return 1;
+  }
+
+  // usleep(250000);
+  // tcflush(serial_port, TCIOFLUSH);
+
+  // int j = 0;
+  // for (j = 0; j < BUFLEN;j++) {
+  //   dprintf(serial_port,"%d\n",j);
   // }
-  //
-  char outbuf[] = "hello world";
-  char inbuf[100] = "";
-  int a,b,c;
-  dprintf(serial_port,"%s\r\n",outbuf);
 
-  read(serial_port, inbuf,(sizeof(inbuf)/sizeof(inbuf[0])));
-  sscanf(inbuf,"%d %d %d",&a,&b,&c);
-  printf("%s",inbuf);
-  printf("a = %d, b = %d, c = %d\n",a,b,c);
-
-  return 0;
+  // usleep(250000);
+  // tcflush(serial_port, TCIOFLUSH);
   //
-  // struct pollfd src;
-  // src.fd = serial_fd;
-  // src.events = POLLIN;
-  // src.revents = 0;
-  //
-  // int check = poll(&src, 1, -1);
-  // printf("check = %d\n",check);
-  //
-  // fcntl(serial_fd, F_SETFL, 0);
-  // int check = read(serial_fd, inbuf, 10);
-  // printf("check = %d\n",check);
-
-  /////////////////////////////////////////////////
-
-  // ////////////////////////////////////////////////
-  // // Doing serial comm w/ wiringPi
-  //
-  // if ((serial_port = serialOpen("/dev/ttyS0", 115200)) < 0) // open serial port
-	// {
-	// 	fprintf(stderr, "Unable to open serial device: %s\n", strerror(errno));
-	// 	return 1;
-	// }
-  //
-	// if (wiringPiSetup() == -1) {
-	// 	fprintf(stdout, "Unable to start wiringPi: %s\n", strerror(errno));
-	// 	return 1;
-	// }
-	// sprintf(writemsg,"%d\r\n",BUFLEN);
-	// serialPuts(serial_port, writemsg);
-  //
-  // // ask client PC for permission to run:
-  // runPermission = serialGetchar(serial_port);
-	// printf("runPermission: %c\r\n",runPermission);
-	// if (runPermission != '1') {
-	// 	printf("Run permission denied by client.\r\n");
-	// 	return 1;
-	// }
-  //
-  // serialFlush(serial_port); // clear junk
-  // serialFlush(serial_port); // clear junk
-  //
-  // // ask client for amplitude:
-  // amptemp = serialGetchar(serial_port);
-  // amp = 1000*(amptemp-48);
-  // // amp = serialGetchar(serial_port);
-	// printf("amplitude: %c\r\n",amptemp);
-  //
-  // serialFlush(serial_port); // clear junk
-  //
-  // // receive current profile from client PC:
-  // for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
-  //   refTraj[readTrajCount] = amp*sin(2*PI*readTrajCount/500.0);
-  //   printf("%d\r\n",refTraj[readTrajCount]);
-  // }
-  //
-  // // // echo value of runPermission to client PC (ends a blocking read in the
-  // // // client PC):
-  // // sprintf(writemsg,"%c\r\n",runPermission);
-	// // serialPuts(serial_port, writemsg);
-  //
-  // // ask client PC for permission to write
-  // writePermission = serialGetchar(serial_port);
-	// printf("writePermission: %c\r\n",writePermission);
-	// if (writePermission != '1') {
-	// 	printf("Write permission denied by client.\r\n");
-	// 	return 1;
-	// }
   //////////////////////////////////////////////////////////////////////////////
 
   printf("Status of data_buf: read = %d, write = %d, empty = %d, full = %d\n",\
@@ -387,6 +326,7 @@ void *CAN_thread() {
     pthread_mutex_unlock(&mutex1);
     // put stuff in the circular buffer:
     pthread_mutex_lock(&mutex1);
+    printf("CAN thread: %d %d %d\n",refTraj[k],refTraj[k],refTraj[k]);
     buffer_write(refTraj[k],refTraj[k],refTraj[k]);
     pthread_mutex_unlock(&mutex1);
     ++k;
@@ -399,7 +339,7 @@ void *CAN_thread() {
 
 void *UART_thread() {
   uint16_t j;
-  uint16_t bufferval[3];
+  int16_t bufferval[3];
   struct periodic_info info;
 
   /****************************************************************************
@@ -412,9 +352,12 @@ void *UART_thread() {
   for (j = 0; j < BUFLEN;) {
     pthread_mutex_lock(&mutex1);
     buffer_read(bufferval);
-    fflush(stdout);
-    sprintf(writemsg,"%d %d %d\r\n",bufferval[0],bufferval[1],bufferval[2]);
-    serialPuts(serial_port, writemsg);
+    // fflush(stdout);
+    // sprintf(writemsg,"%d %d %d\n",bufferval[0],bufferval[1],bufferval[2]);
+    // dprintf(serial_port,"%d\n",j);
+    dprintf(serial_port,"%d %d %d\n",bufferval[0],bufferval[1],bufferval[2]);
+    printf("UART thread: %d: %d %d %d\n",j,bufferval[0],bufferval[1],bufferval[2]);
+    // serialPuts(serial_port, writemsg);
     ++j;
     pthread_mutex_unlock(&mutex1);
 

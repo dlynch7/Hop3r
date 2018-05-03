@@ -10,14 +10,14 @@
 #include <stdio.h>
 #include <stdint.h>
 
-#define BUFLEN 1024
+#define BUFLEN 1000
 #define NSAMPLES 5000
 
 uint16_t get_read_index(void); // return the value of the read index
 uint16_t get_write_index(void);// return the value of the write index
 uint8_t buffer_empty(void); // return true if the buffer is empty (read=write)
 uint8_t buffer_full(void);  // return true if the buffer is full
-void buffer_read(uint16_t *); // reads from current buffer index
-void buffer_write(uint16_t,uint16_t,uint16_t);// change the buffer value indexed by "write"
+void buffer_read(int16_t *); // reads from current buffer index
+void buffer_write(int16_t,int16_t,int16_t);// change the buffer value indexed by "write"
 
 #endif
