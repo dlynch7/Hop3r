@@ -55,8 +55,8 @@
  *
  */
 
-#include <errno.h>
-#include <fcntl.h>
+#include <errno.h>          /* Error number definitions */
+#include <fcntl.h>          /* File control definitions */
 #include <linux/can.h>
 #include <linux/can/raw.h>
 #include <math.h>
@@ -65,14 +65,14 @@
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
-#include <stdio.h>
+#include <stdio.h>          /* Standard input/optput definitions */
 #include <stdlib.h>
-#include <string.h>
+#include <string.h>         /* String function definitions */
 #include <sys/ioctl.h>
-#include <sys/types.h>	// needed for getpid()
-// #include <termios.h>
+#include <sys/types.h>	    // needed for getpid()
+#include <termios.h>        /* POSIX terminal control definitions */
 #include <time.h>
-#include <unistd.h>			// needed for getpid()
+#include <unistd.h>         /* UNIX standard function definitions */
 #include <wiringPi.h>
 #include <wiringSerial.h>
 
@@ -80,6 +80,7 @@
 #include "circ_buffer.h"
 // #include "kinematic.h"
 #include "per_threads.h"
+#include "serial_interface.h"
 
 #define CAN_PERIOD_US 2000
 #define UART_PERIOD_US 2000
@@ -113,12 +114,17 @@ int main(void) {
   /////////////////////////////////////////////
   // Trying to do serial comm the POSIX way
 
-  // // open the serial port:
-  // int serial_fd = open("/dev/ttyS0", O_RDWR | O_NOCTTY | O_NDELAY);
-  // if (serial_fd < 0 || !isatty(serial_fd)) {
-  //     // errno will be set
-  // }
-  //
+  // open the serial port:
+  serial_port = open_port();
+  printf("serial_port = %d\n",serial_port);
+
+  config_port(serial_port);
+
+  // int temp;
+  //   // length = sizeof(buf)/sizeof(buf[0]);
+  // temp = serial_write(serial_port, "hello!\n",7);
+  // printf("serial_write() returned %d\n",temp);
+
   // // wait, then flush the OS's buffer on the serial port:
   // usleep(250000);
   // tcflush(serial_fd, TCIOFLUSH);
@@ -142,78 +148,87 @@ int main(void) {
   // if (tcsetattr(serial_fd, TCSANOW, &serialSet) == -1) {
   //   // errno will be set
   // }
+  //
+  char outbuf[] = "hello world";
+  char inbuf[100] = "";
+  int a,b,c;
+  dprintf(serial_port,"%s\r\n",outbuf);
 
-  // char outbuf[] = "hello world";
-  // char inbuf[10] = "";
-  // dprintf(serial_fd,"%s\r\n",outbuf);
+  read(serial_port, inbuf,(sizeof(inbuf)/sizeof(inbuf[0])));
+  sscanf(inbuf,"%d %d %d",&a,&b,&c);
+  printf("%s",inbuf);
+  printf("a = %d, b = %d, c = %d\n",a,b,c);
 
+  return 0;
+  //
   // struct pollfd src;
   // src.fd = serial_fd;
   // src.events = POLLIN;
   // src.revents = 0;
-
+  //
   // int check = poll(&src, 1, -1);
   // printf("check = %d\n",check);
-
+  //
   // fcntl(serial_fd, F_SETFL, 0);
   // int check = read(serial_fd, inbuf, 10);
   // printf("check = %d\n",check);
 
   /////////////////////////////////////////////////
 
-  ////////////////////////////////////////////////
-  // Doing serial comm w/ wiringPi
-
-  if ((serial_port = serialOpen("/dev/ttyS0", 115200)) < 0) // open serial port
-	{
-		fprintf(stderr, "Unable to open serial device: %s\n", strerror(errno));
-		return 1;
-	}
-
-	if (wiringPiSetup() == -1) {
-		fprintf(stdout, "Unable to start wiringPi: %s\n", strerror(errno));
-		return 1;
-	}
-	sprintf(writemsg,"%d\r\n",BUFLEN);
-	serialPuts(serial_port, writemsg);
-
-  // ask client PC for permission to run:
-  runPermission = serialGetchar(serial_port);
-	printf("runPermission: %c\r\n",runPermission);
-	if (runPermission != '1') {
-		printf("Run permission denied by client.\r\n");
-		return 1;
-	}
-
-  serialFlush(serial_port); // clear junk
-  serialFlush(serial_port); // clear junk
-
-  // ask client for amplitude:
-  amptemp = serialGetchar(serial_port);
-  amp = 1000*(amptemp-48);
-  // amp = serialGetchar(serial_port);
-	printf("amplitude: %c\r\n",amptemp);
-
-  serialFlush(serial_port); // clear junk
-
-  // receive current profile from client PC:
-  for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
-    refTraj[readTrajCount] = amp*sin(2*PI*readTrajCount/500.0);
-    printf("%d\r\n",refTraj[readTrajCount]);
-  }
-
-  // // echo value of runPermission to client PC (ends a blocking read in the
-  // // client PC):
-  // sprintf(writemsg,"%c\r\n",runPermission);
+  // ////////////////////////////////////////////////
+  // // Doing serial comm w/ wiringPi
+  //
+  // if ((serial_port = serialOpen("/dev/ttyS0", 115200)) < 0) // open serial port
+	// {
+	// 	fprintf(stderr, "Unable to open serial device: %s\n", strerror(errno));
+	// 	return 1;
+	// }
+  //
+	// if (wiringPiSetup() == -1) {
+	// 	fprintf(stdout, "Unable to start wiringPi: %s\n", strerror(errno));
+	// 	return 1;
+	// }
+	// sprintf(writemsg,"%d\r\n",BUFLEN);
 	// serialPuts(serial_port, writemsg);
-
-  // ask client PC for permission to write
-  writePermission = serialGetchar(serial_port);
-	printf("writePermission: %c\r\n",writePermission);
-	if (writePermission != '1') {
-		printf("Write permission denied by client.\r\n");
-		return 1;
-	}
+  //
+  // // ask client PC for permission to run:
+  // runPermission = serialGetchar(serial_port);
+	// printf("runPermission: %c\r\n",runPermission);
+	// if (runPermission != '1') {
+	// 	printf("Run permission denied by client.\r\n");
+	// 	return 1;
+	// }
+  //
+  // serialFlush(serial_port); // clear junk
+  // serialFlush(serial_port); // clear junk
+  //
+  // // ask client for amplitude:
+  // amptemp = serialGetchar(serial_port);
+  // amp = 1000*(amptemp-48);
+  // // amp = serialGetchar(serial_port);
+	// printf("amplitude: %c\r\n",amptemp);
+  //
+  // serialFlush(serial_port); // clear junk
+  //
+  // // receive current profile from client PC:
+  // for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
+  //   refTraj[readTrajCount] = amp*sin(2*PI*readTrajCount/500.0);
+  //   printf("%d\r\n",refTraj[readTrajCount]);
+  // }
+  //
+  // // // echo value of runPermission to client PC (ends a blocking read in the
+  // // // client PC):
+  // // sprintf(writemsg,"%c\r\n",runPermission);
+	// // serialPuts(serial_port, writemsg);
+  //
+  // // ask client PC for permission to write
+  // writePermission = serialGetchar(serial_port);
+	// printf("writePermission: %c\r\n",writePermission);
+	// if (writePermission != '1') {
+	// 	printf("Write permission denied by client.\r\n");
+	// 	return 1;
+	// }
+  //////////////////////////////////////////////////////////////////////////////
 
   printf("Status of data_buf: read = %d, write = %d, empty = %d, full = %d\n",\
   get_read_index(),get_write_index(),buffer_empty(),buffer_full());
