@@ -5,58 +5,93 @@ function hopper_client(port)
         fclose(instrfind);
         delete(instrfind);
     end
+    
+%     clean = onCleanup(@()fclose(port));
+    
     fprintf('Opening port  %s....\n',port);
 %     mySerial = serial(port, 'BaudRate', 115200, 'FlowControl', 'hardware','Timeout',10); 
     mySerial = serial(port, 'BaudRate', 115200,'Timeout',10); 
 
     fopen(mySerial);
+    fprintf('serial port opened!\n');
     nsamples = fscanf(mySerial,'%d');
     
-    fprintf('Expecting  %d....\n',nsamples);
+    fprintf('Expecting %d samples\n',nsamples);
     
-    fprintf(mySerial,'1');
+    runPermission = 1;
+%     fprintf(mySerial,'1');
+    fprintf(mySerial,'%d\n',runPermission);
     
 %     fscanf(mySerial,'%d');
     
-    Amp = input('\nEnter amplitude ');
-    fprintf(mySerial,'%d',Amp);
-    fprintf(mySerial,'1');
-    fscanf(mySerial,'%d');
-    clean = onCleanup(@()fclose(mySerial)); 
+    Amp = input('\nEnter amplitude: ');
+%     fprintf(mySerial,'%d\n',Amp);
+%     fprintf(mySerial,'1\n');
+%     fscanf(mySerial,'%d'); 
     
-end
+
     
-%     f = input('\nEnter Frequency ');
-% 
-%     ts=1/500;
-%     T=20;
-%     t=0:ts:T;
-%     y=Amp*sin(2*pi*f*t);
-%     plot(t,y)
-%     a=length(y);
-%     fprintf('length=  %d....\n',a)
+    f = input('\nEnter frequency: ');
+
+    ts = 1/500;
+    T = ts*nsamples;
+    t = 0:ts:T;
+    y_mA = int16(Amp*1000*sin(2*pi*f*t));
+    
+    figure;
+    plot(t,y_mA)
+    
+
+     for i=1:length(y_mA)-1
+        str = sprintf('%d',y_mA(i));
+        fprintf('sending  y(%d) = %d\n',i,y_mA(i))
+        fprintf(mySerial,'%s\n',str);
+     end
+     
+     fprintf("done sending\n");
+     flushinput(mySerial);
+%      fscanf(mySerial); % flush the serial buffer
+     
+     
+%      ser_check = fscanf(mySerial,'%d');
+%      fprintf("ser_check = %d\n",ser_check);
 %      
-%      for i=1:length(y)-1
-%           fprintf('sending  %d....\n',i)   
-% %          fprintf(mySerial,'%s\n',x(i));
+%      if (fscanf(mySerial,'%d') ~= nsamples)
+%         writePermission = 0;
+%         fprintf(mySerial,'%d\n',writePermission);
+%         fprintf("Serial comm experienced an error. Program ending.\n"); 
+%         return;
 %      end
-%      fprintf('length=  %d....\n',a)
-%      
-% 
-%      exit()
-%     
+     
+     fscanf(mySerial);
+     
+%      flushoutput(mySerial);
+     flushinput(mySerial); % flush the serial buffer
+   
 %     
 %         
-%     
+    writePermission = 1;
+     fprintf(mySerial,'%d\n',writePermission);
 %     
 %     fprintf(mySerial,'1\n');
 %     data = zeros(nsamples); 
 %     
 % 
-%       for i=1:nsamples
-%           data(i) = fscanf(mySerial,'%d'); 
-%           fprintf('%d....\n',data(i));   
-%       end
+      fscanf(mySerial);
+        for i=1:nsamples
+%           str = fscanf(mySerial,'%s');
+%           fprintf('%s\n',str);
+        data(i,1:3) = fscanf(mySerial,'%d %d %d');
+        fprintf('%d: %d %d %d\n',[i-1,data(i,1:3)]);
+      end
+      
+      fprintf("done reading\n");
+      
+      figure;
+      plot(data(:,1:3));
+      title('Received data')
+      
+end 
 %       
 %     clean = onCleanup(@()fclose(mySerial)); 
 % 
