@@ -38,9 +38,9 @@ int8_t subchainFK(float *qa, float *qu, float *footPose, uint8_t chainOption);
 int8_t subchainIK(float *qa, float *qu, float *footPose);
 
 // Jacobians
-int8_t actuatorJacobian(float *J, float *qa, float *qu, uint8_t chainOption);
-int8_t constraintJacobian(float *J, float *qa, float *qu);
-int8_t subchainJacobian(float *J, float *qa, float *qu, uint8_t chainOption);
+int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption);
+int8_t constraintJacobian(double *Jc, float *qa, float *qu);
+int8_t subchainJacobian(double *Js, float *qa, float *qu, uint8_t chainOption);
 
 // task space to joint space conversions:
 int8_t twist2vels(float *qa, float *qu, float *dqa_dt, float *twist);
