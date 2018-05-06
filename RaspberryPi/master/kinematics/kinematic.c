@@ -526,18 +526,47 @@ int8_t subchainJacobian(double *Js, float *qa, float *qu, uint8_t chainOption) {
 }
 
 // task space to joint space conversions
-int8_t twist2vels(float *qa, float *qu, float *dqa_dt, float *twist) {
+int8_t twist2vels(float *qa, float *qu, double *dqa_dt, double *twist) {
   // computes motor velocities from foot twist:
   // vels = inv(Ja)*twist, where Ja is the actuator Jacobian
+  double Ja[9], Jainv[9];
+  int i,j,s;
+
+  if (actuatorJacobian(Ja, qa, qu, 0)) {
+    printf("twist2vels: failed to compute actuator Jacobian.\n");
+    return 1; // failure
+  }
+
+  // invert the actuator Jacobian:
+  gsl_matrix_view m = gsl_matrix_view_array(Ja,3,3);
+  gsl_matrix_view inv = gsl_matrix_view_array(Jainv,3,3);
+  gsl_permutation * p = gsl_permutation_alloc(3);
+  gsl_linalg_LU_decomp(&m.matrix,p,&s);
+  gsl_linalg_LU_invert(&m.matrix,p,&inv.matrix);
+
+  for (i = 0; i < 3; ++i)
+      for (j = 0; j < 3; ++j)
+          Jainv[(3*i)+j] = gsl_matrix_get(&inv.matrix,i,j);
+  gsl_permutation_free(p);
+
+  cblas_dgemv(CblasRowMajor, CblasNoTrans, 3, 3, 1.0, Jainv, 3,
+    twist, 1, 0.0, dqa_dt, 1);
 
   return 0;
 }
 
-int8_t wrench2torques(float *qa, float *qu, float *torques, float *wrench) {
+int8_t wrench2torques(float *qa, float *qu, double *torques, double *wrench) {
   // computes motor torques from foot wrench:
   // torques = Ja'*wrench, where Ja is the actuator Jacobian
+  double Ja[9];
 
+  if (actuatorJacobian(Ja, qa, qu, 0)) {
+    printf("wrench2torques: failed to compute actuator Jacobian.\n");
+    return 1; // failure
+  }
 
+  cblas_dgemv(CblasRowMajor, CblasTrans, 3, 3, 1.0, Ja, 3,
+    wrench, 1, 0.0, torques, 1);
 
   return 0;
 }
