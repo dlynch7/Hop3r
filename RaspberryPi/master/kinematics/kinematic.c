@@ -300,11 +300,12 @@ int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption) {
   double Jphi[9]; // subchain Jacobian (phi chain), 3x3
   double Jpsi[9]; // subchain Jacobian (psi chain), 3x3
   double Ha[18]; // another Jacobian, 6x3
-  double B[9]; // an intermediate matrix, 6x3
+  double B[18]; // an intermediate matrix, 6x3
   double C[9]; // another intermediate matrix, 3x3
 
   // compute the constraint Jacobian:
   if (constraintJacobian(Jc,qa,qu)) {
+    printf("actuatorJacobian: failed to compute constraintJacobian.\n");
     return 1; // failure
   }
   // invert the constraint Jacobian:
@@ -320,12 +321,17 @@ int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption) {
 
   // compute all 3 open subchain Jacobians:
   if (subchainJacobian(Jtheta,qa,qu,0)) {
+    printf("actuatorJacobian: failed to compute Jtheta.\n");
     return 1; // failure
   }
+
   if (subchainJacobian(Jphi,qa,qu,1)) {
+    printf("actuatorJacobian: failed to compute Jphi.\n");
     return 1; // failure
   }
+
   if (subchainJacobian(Jpsi,qa,qu,2)) {
+    printf("actuatorJacobian: failed to compute Jpsi.\n");
     return 1; // failure
   }
 
@@ -351,7 +357,7 @@ int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption) {
 
   cblas_dgemm(CblasRowMajor,
               CblasNoTrans,CblasNoTrans, 6, 3, 6,
-              -1.0, Jcinv, 6, Ha, 6, 0.0, B, 6);
+              -1.0, Jcinv, 6, Ha, 3, 0.0, B, 3); // lda, ldb, ldc is weird!
 
   // Compute the actuator Jacobian using the specified subchain:
   switch (chainOption) {
@@ -371,6 +377,7 @@ int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption) {
         cblas_dgemm(CblasRowMajor,
                     CblasNoTrans,CblasNoTrans, 3, 3, 3,
                     1.0, Jtheta, 3, C, 3, 0.0, Ja, 3);
+        break;
       }
     case 1:
       { // Ja = Jphi*(a bunch of stuff)
@@ -388,6 +395,7 @@ int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption) {
         cblas_dgemm(CblasRowMajor,
                     CblasNoTrans,CblasNoTrans, 3, 3, 3,
                     1.0, Jphi, 3, C, 3, 0.0, Ja, 3);
+        break;
       }
     case 2:
       { // Ja = Jpsi*(a bunch of stuff)
@@ -405,8 +413,10 @@ int8_t actuatorJacobian(double *Ja, float *qa, float *qu, uint8_t chainOption) {
         cblas_dgemm(CblasRowMajor,
                     CblasNoTrans,CblasNoTrans, 3, 3, 3,
                     1.0, Jpsi, 3, C, 3, 0.0, Ja, 3);
+        break;
       }
     default:
+      printf("actuatorJacobian: invalid chainOption.\n");
       return 1; // failure
   }
 
@@ -517,9 +527,17 @@ int8_t subchainJacobian(double *Js, float *qa, float *qu, uint8_t chainOption) {
 
 // task space to joint space conversions
 int8_t twist2vels(float *qa, float *qu, float *dqa_dt, float *twist) {
+  // computes motor velocities from foot twist:
+  // vels = inv(Ja)*twist, where Ja is the actuator Jacobian
+
   return 0;
 }
 
 int8_t wrench2torques(float *qa, float *qu, float *torques, float *wrench) {
+  // computes motor torques from foot wrench:
+  // torques = Ja'*wrench, where Ja is the actuator Jacobian
+
+
+
   return 0;
 }

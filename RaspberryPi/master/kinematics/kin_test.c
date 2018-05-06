@@ -45,7 +45,8 @@ int main(void) {
   printf("  %g, %g ]\n", C[2], C[3]);
 
   float qa[3] = {-1.6845,-2.6214,-1.4571};
-  float qu[6] = {0.5867,-0.4729,2.0785,-1.0279,-0.5867,0.4729};
+  float qu[6];
+  // float qu[6] = {0.5867,-0.4729,2.0785,-1.0279,-0.5867,0.4729};
   float footPose[3] = {};
 
   double Jc[36] = {};
@@ -59,8 +60,10 @@ int main(void) {
 
   clock_t toc0 = clock();
 
+
+
   printf("th2 = %f\tth3 = %f\nph2 = %f\tph3 = %f\nps2 = %f\tps3 = %f\n",qu[0],qu[1],qu[2],qu[3],qu[4],qu[5]);
-  printf("Elapsed: %f seconds\n", (double)(toc0 - tic0) / CLOCKS_PER_SEC);
+  printf("Calculation of qu, footPose, and Jc took %f seconds\n", (double)(toc0 - tic0) / CLOCKS_PER_SEC);
 
   printf("Jc = \n");
   printf("%f\t%f\t%f\t%f\t%f\t%f\n",Jc[0],Jc[1],Jc[2],Jc[3],Jc[4],Jc[5]);
@@ -115,14 +118,20 @@ int main(void) {
 
    gsl_permutation_free(p);
 
-   printf("Elapsed: %f seconds\n", ((double)(toc1 - tic1) / CLOCKS_PER_SEC) + ((double)(toc2 - tic2) / CLOCKS_PER_SEC));
+   printf("Inversion of Jc took %f seconds\n", ((double)(toc1 - tic1) / CLOCKS_PER_SEC) + ((double)(toc2 - tic2) / CLOCKS_PER_SEC));
 
    double Ja[9];
+   uint8_t didJaSucceed = 0;
    clock_t tic3 = clock();
-   actuatorJacobian(Ja, qa, qu, 0);
+   didJaSucceed = actuatorJacobian(Ja, qa, qu, 0);
    clock_t toc3 = clock();
 
-   printf("Elapsed: %f seconds\n", (double)(toc3 - tic3) / CLOCKS_PER_SEC);
+   printf("Did Ja succeed? Yes (0) / No(1): %d\n",didJaSucceed);
+   printf("Calculation of Ja took %f seconds\n", (double)(toc3 - tic3) / CLOCKS_PER_SEC);
+   printf("Ja = \n");
+   for (i = 0; i < 3; ++i)
+       for (j = 0; j < 3; ++j)
+           printf(j==2?"%6.3f\n":"%6.3f\t",Ja[(3*i)+j]);
 
    return 0;
 }
