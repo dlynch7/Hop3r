@@ -60,6 +60,7 @@
 #include "utils/uartstdio.h"
 
 #include "copley_accelus.h"
+#include "RLS_Orbis.h"
 
 #define LED_RED GPIO_PIN_1
 #define LED_BLUE GPIO_PIN_2
@@ -143,6 +144,9 @@ MotorControllerIntHandler(void)
     static uint16_t pulse_width = 0;
 
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
+
+    readRLS();
+
     switch (MODE) {
       case IDLE:
       {
@@ -183,6 +187,7 @@ void TimerBegin(){
   IntEnable(INT_TIMER0A); // Setup the interrupts for the timer timeouts.
   TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
   TimerEnable(TIMER0_BASE, TIMER_A); // Enable the timer.
+  UARTprintf("Timer A0 initialized!\n");
 }
 
 //*****************************************************************************
@@ -306,13 +311,13 @@ main(void)
 #endif
 
 
-    TimerBegin();
-
     //
     // Set up the serial console to use for displaying messages.  This is
     // just for this example program and is not needed for CAN operation.
     //
     InitConsole();
+
+    initRLS();
 
     // Rx: light up GREEN LED
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
@@ -432,12 +437,16 @@ main(void)
     sCANMessage.ui32MsgID = 0x4001; // used for commanded position
     CANMessageSet(CAN0_BASE, 2, &sCANMessage, MSG_OBJ_TYPE_RX);
 
+    TimerBegin();
+
     // set_copley_mode(1);
     // get_copley_mode();
     MODE = CUR_CTRL;
     set_current_mA(0);
 
     UARTprintf("Motor 1 node up!\n");
+
+    readRLS();
 
     //
     // Enter loop to process received messages.  This loop just checks a flag
@@ -504,7 +513,7 @@ main(void)
             g_bRXFlag2 = 0;
             // PrintCANMessageInfo(&sCANMessage, 2);
             POS_REF = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
-            UARTprintf("POS_REF: %d\n",POS_REF);
+            // UARTprintf("POS_REF: %d\n",POS_REF);
         }
 
     }
