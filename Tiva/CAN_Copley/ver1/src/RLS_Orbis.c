@@ -56,6 +56,7 @@ void initRLS(void) {
 
 uint32_t readRLS(void) {
   uint32_t angleDeg;
+  int num;
   uint8_t index = 0;
 
   uint32_t pui32DataTx[NUM_SSI_DATA];
@@ -84,12 +85,15 @@ uint32_t readRLS(void) {
     SSIDataGet(SSI0_BASE, &pui32DataRx[index]);
   }
 
-  angleDeg = (pui32DataRx[0]<<6) | (pui32DataRx[1]>>2);
-  angleDeg = 360*angleDeg/16383.0;
-
-  UARTprintf("Sent:\n  ");
-  UARTprintf("'%c' ", pui32DataTx[0]);
-  UARTprintf("Angle: %d\n",angleDeg);
+  angleDeg = ((pui32DataRx[0]<<6) | (pui32DataRx[1]>>2));
+  // angleDeg = 0x3FF & ((pui32DataRx[0]<<8) | (pui32DataRx[1]));
+  // angleDeg = 360*angleDeg/16384.0;
+  //
+  // UARTprintf("Sent:\n  ");
+  // UARTprintf("'%c' ", pui32DataTx[0]);
+  // UARTprintf("RLS: %02X %02X\n",pui32DataRx[0],pui32DataRx[1]);
+  UARTprintf("RLS: %04X = %d = %d degrees\n",angleDeg, angleDeg, (360*angleDeg/8192));
+  // UARTprintf("Angle: %d\n",angleDeg);
 
   return angleDeg;
 
