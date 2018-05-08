@@ -69,8 +69,12 @@
 #include "driverlib/uart.h"
 #include "utils/uartstdio.h"
 
-#define LED_RED GPIO_PIN_1
-#define LED_BLUE GPIO_PIN_2
+//#define LED_RED GPIO_PIN_1
+//#define LED_BLUE GPIO_PIN_2
+//#define LED_GREEN GPIO_PIN_3
+
+// for custom board
+#define LED_RED GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
 #define BOOM_READ_FREQ 10 // TODO: choose the right freq
@@ -126,11 +130,11 @@ void
 InitConsole(void)
 {
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA); // Enable GPIO port A which is used for UART0 pins.
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // Enable UART0 so that we can configure the clock.
     GPIOPinConfigure(GPIO_PA0_U0RX); // pin muxing
     GPIOPinConfigure(GPIO_PA1_U0TX); // pin muxing
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // Enable UART0 so that we can configure the clock.
-    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC); // Use the internal 16MHz oscillator as the UART clock source.
     GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1); // Select the alternate (UART) function for these pins.
+    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC); // Use the internal 16MHz oscillator as the UART clock source.
     UARTStdioConfig(0, 115200, 16000000); // Initialize the UART for console I/O.
 }
 
@@ -160,6 +164,9 @@ BoomReadIntHandler(void)
 
     static uint32_t pui32DataTx[NUM_SSI_DATA];
     static uint32_t pui32DataRx[NUM_SSI_DATA];
+
+    // turn on LED
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_RED, LED_RED);
 
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
     // read from the encoder via SPI
@@ -203,6 +210,9 @@ BoomReadIntHandler(void)
     //
 
     CANMessageSet(CAN0_BASE, 1, &sCANMessage, MSG_OBJ_TYPE_TX);
+
+    // turn off LED
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_RED, 0);
 
     HWREGBITW(&g_ui32Flags, 0) ^= 1; // Toggle the flag for the first timer.
     // GPIOPinWrite(GPIO_PORTF_BASE, LED_RED, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
@@ -300,7 +310,6 @@ main(void)
                    SYSCTL_XTAL_16MHZ);
 #endif
 
-
     TimerBegin();
 
     //
@@ -309,40 +318,48 @@ main(void)
     //
     InitConsole();
 
+    // Rx: light up GREEN LED
+    //SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
+    //GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_GREEN);
+
+    // for custom board
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, LED_RED|LED_GREEN);
+
+    // turn on LED
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_RED, LED_RED);
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_GREEN, LED_GREEN);
+
     // Set up SPI over SSI:
 
-      // The SSI0 peripheral must be enabled for use.
-      SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
+    // The SSI0 peripheral must be enabled for use.
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_SSI0);
 
-      SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
-      GPIOPinConfigure(GPIO_PA2_SSI0CLK);
-      GPIOPinConfigure(GPIO_PA3_SSI0FSS);
-      GPIOPinConfigure(GPIO_PA4_SSI0RX);
-      GPIOPinConfigure(GPIO_PA5_SSI0TX);
+    GPIOPinConfigure(GPIO_PA2_SSI0CLK);
+    GPIOPinConfigure(GPIO_PA3_SSI0FSS);
+    GPIOPinConfigure(GPIO_PA4_SSI0RX);
+    GPIOPinConfigure(GPIO_PA5_SSI0TX);
 
-      GPIOPinTypeSSI(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_3 | GPIO_PIN_2);
+    GPIOPinTypeSSI(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_3 | GPIO_PIN_2);
 
-      #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
-          defined(TARGET_IS_TM4C129_RA1) ||                                         \
-          defined(TARGET_IS_TM4C129_RA2)
-          SSIConfigSetExpClk(SSI0_BASE, ui32SysClock, SSI_FRF_MOTO_MODE_0,
-                             SSI_MODE_MASTER, 1000000, 16); // changed to 16-bit mode, per AEAT-6600 datasheet
-      #else
-          SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
-                             SSI_MODE_MASTER, 1000000, 16); // changed to 16-bit mode, per AEAT-6600 datasheet
-      #endif
+    #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+        defined(TARGET_IS_TM4C129_RA1) ||                                         \
+        defined(TARGET_IS_TM4C129_RA2)
+        SSIConfigSetExpClk(SSI0_BASE, ui32SysClock, SSI_FRF_MOTO_MODE_0,
+                           SSI_MODE_MASTER, 1000000, 16); // changed to 16-bit mode, per AEAT-6600 datasheet
+    #else
+        SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
+                           SSI_MODE_MASTER, 1000000, 16); // changed to 16-bit mode, per AEAT-6600 datasheet
+    #endif
 
-      // Enable the SSI0 module.
-      SSIEnable(SSI0_BASE);
+    // Enable the SSI0 module.
+    SSIEnable(SSI0_BASE);
 
-      UARTprintf("SSI ->\n");
-      UARTprintf("  Mode: SPI\n");
-      UARTprintf("  Data: 16-bit\n\n");
-
-    // Rx: light up GREEN LED
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_GREEN);
+    UARTprintf("SSI ->\n");
+    UARTprintf("  Mode: SPI\n");
+    UARTprintf("  Data: 16-bit\n\n");
 
     //
     // For this example CAN0 is used with RX and TX pins on port B4 and B5.
@@ -351,7 +368,10 @@ main(void)
     // GPIO port B needs to be enabled so these pins can be used.
     // TODO: change this to whichever GPIO port you are using
     //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    //SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+
+    // for custom board; CAN is on E4 (RX) and E5 (TX)
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
 
     //
     // Configure the GPIO pin muxing to select CAN0 functions for these pins.
@@ -360,8 +380,11 @@ main(void)
     // Consult the data sheet to see which functions are allocated per pin.
     // TODO: change this to select the port/pin you are using
     //
-    GPIOPinConfigure(GPIO_PB4_CAN0RX);
-    GPIOPinConfigure(GPIO_PB5_CAN0TX);
+    //GPIOPinConfigure(GPIO_PB4_CAN0RX);
+    //GPIOPinConfigure(GPIO_PB5_CAN0TX);
+
+    GPIOPinConfigure(GPIO_PE4_CAN0RX);
+    GPIOPinConfigure(GPIO_PE5_CAN0TX);
 
     //
     // Enable the alternate function on the GPIO pins.  The above step selects
@@ -369,7 +392,8 @@ main(void)
     // alternate function instead of GPIO for these pins.
     // TODO: change this to match the port/pin you are using
     //
-    GPIOPinTypeCAN(GPIO_PORTB_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+    //GPIOPinTypeCAN(GPIO_PORTB_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPinTypeCAN(GPIO_PORTE_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
     //
     // The GPIO port and pins have been set up for CAN.  The CAN peripheral
@@ -448,9 +472,11 @@ main(void)
     //
     CANMessageSet(CAN0_BASE, 1, &sCANMessage, MSG_OBJ_TYPE_RX);
 
-
-
     UARTprintf("Boom %d node up!\n",BOOM_ID);
+
+    // turn off LED
+    //GPIOPinWrite(GPIO_PORTD_BASE, LED_RED, 0);
+    //GPIOPinWrite(GPIO_PORTD_BASE, LED_GREEN, 0);
 
     //
     // Enter loop to process received messages.  This loop just checks a flag

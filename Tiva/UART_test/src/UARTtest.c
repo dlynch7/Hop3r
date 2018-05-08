@@ -128,6 +128,7 @@ main(void)
     // Enable the GPIO pins for the LED (PF2 & PF3).
     //
     GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_2);
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_3);
 
     //
     // Initialize the UART.
@@ -148,6 +149,7 @@ main(void)
         // Turn on the LED.
         //
         GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
+        GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, GPIO_PIN_3);
 
         //
         // Delay for a bit.
@@ -158,6 +160,7 @@ main(void)
         // Turn off the BLUE LED.
         //
         GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 0);
+        GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
 
         //
         // Delay for a bit.
