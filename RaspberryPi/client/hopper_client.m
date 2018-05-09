@@ -1,15 +1,12 @@
-function hopper_client(port)
+function hopper_client
 
-%     port='/dev/ttyUSB1';
+    port='/dev/ttyUSB0';
     if ~isempty(instrfind)
         fclose(instrfind);
         delete(instrfind);
     end
     
-%     clean = onCleanup(@()fclose(port));
-    
     fprintf('Opening port  %s....\n',port);
-%     mySerial = serial(port, 'BaudRate', 115200, 'FlowControl', 'hardware','Timeout',10); 
     mySerial = serial(port, 'BaudRate', 115200,'Timeout',10); 
 
     fopen(mySerial);
@@ -19,32 +16,44 @@ function hopper_client(port)
     fprintf('Expecting %d samples\n',nsamples);
     
     runPermission = 1;
-%     fprintf(mySerial,'1');
     fprintf(mySerial,'%d\n',runPermission);
     
-%     fscanf(mySerial,'%d');
+%     Amp = input('\nEnter amplitude: ');
+%     
+% 
+%     
+%     f = input('\nEnter frequency: ');
+% 
+%     ts = 1/500;
+%     T = ts*nsamples;
+%     t = 0:ts:T;
+%     y_mA = int16(Amp*1000*sin(2*pi*f*t));
+%     
+%     figure;
+%     plot(t,y_mA)
+
+    qa1_fullext = -1.6845;
+    qa2_fullext = -2.6214;
+    qa3_fullext = -1.4571;
     
-    Amp = input('\nEnter amplitude: ');
-%     fprintf(mySerial,'%d\n',Amp);
-%     fprintf(mySerial,'1\n');
-%     fscanf(mySerial,'%d'); 
+    qa1_fullcmp = -2.6564;
+    qa2_fullcmp = -2.9706;
+    qa3_fullcmp = -0.4835;
+
+    qa(:,1:3) = [linspace(qa1_fullext,qa1_fullcmp,nsamples)', ...
+        linspace(qa2_fullext,qa2_fullcmp,nsamples)', ...
+        linspace(qa3_fullext,qa3_fullcmp,nsamples)'];
     
 
-    
-    f = input('\nEnter frequency: ');
+%      for i=1:length(y_mA)-1
+%         str = sprintf('%d',y_mA(i));
+%         fprintf('sending  y(%d) = %d\n',i,y_mA(i))
+%         fprintf(mySerial,'%s\n',str);
+%      end
 
-    ts = 1/500;
-    T = ts*nsamples;
-    t = 0:ts:T;
-    y_mA = int16(Amp*1000*sin(2*pi*f*t));
-    
-    figure;
-    plot(t,y_mA)
-    
-
-     for i=1:length(y_mA)-1
-        str = sprintf('%d',y_mA(i));
-        fprintf('sending  y(%d) = %d\n',i,y_mA(i))
+     for i=1:nsamples
+        str = sprintf('%5.3f %5.3f %5.3f',qa(i,1),qa(i,2),qa(i,3));
+        fprintf('sending  qa(%d) = %5.3f %5.3f %5.3f\n',i,qa(i,1),qa(i,2),qa(i,3))
         fprintf(mySerial,'%s\n',str);
      end
      
@@ -81,8 +90,8 @@ function hopper_client(port)
         for i=1:nsamples
 %           str = fscanf(mySerial,'%s');
 %           fprintf('%s\n',str);
-        data(i,1:3) = fscanf(mySerial,'%d %d %d');
-        fprintf('%d: %d %d %d\n',[i-1,data(i,1:3)]);
+        data(i,1:3) = fscanf(mySerial,'%f %f %f');
+        fprintf('%d: %f %f %f\n',[i-1,data(i,1:3)]);
       end
       
       fprintf("done reading\n");
