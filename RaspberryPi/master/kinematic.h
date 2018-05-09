@@ -46,4 +46,5 @@ int8_t subchainJacobian(double *Js, float *qa, float *qu, uint8_t chainOption);
 int8_t twist2vels(float *qa, float *qu, double *dqa_dt, double *twist);
 int8_t wrench2torques(float *qa, float *qu, double *torques, double *wrench);
 
+
 #endif

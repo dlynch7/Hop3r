@@ -244,6 +244,7 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   float phi3 = angF - phi1 - phi2 - 2*PI;
 
   // printf("ph1 = %f\tph2 = %f\tph3 = %f\n",phi1,phi2,phi3);
+  
 
   /****************************************************************************
   * IK for psi-chain:
