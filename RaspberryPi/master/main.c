@@ -78,7 +78,7 @@
 
 #include "linux-can-utils/lib.h"
 #include "circ_buffer.h"
-// #include "kinematic.h"
+#include "kinematic.h"
 #include "per_threads.h"
 #include "serial_interface.h"
 
@@ -101,6 +101,7 @@ int16_t amp = 0;
 int amptemp = 0;
 
 int refTraj[BUFLEN] = {};
+float qaTraj[BUFLEN][3] = {};
 
 int main(void) {
   int rc1, rc2;
@@ -139,8 +140,10 @@ int main(void) {
   // receive current profile from client PC:
   for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
     read(serial_port, inbuf,INBUFLENGTH);
-    sscanf(inbuf,"%d\n",&refTraj[readTrajCount]);
-    printf("%d %d\n",readTrajCount,refTraj[readTrajCount]);
+    sscanf(inbuf,"%f %f %f\n",&qaTraj[readTrajCount][0],&qaTraj[readTrajCount][1],&qaTraj[readTrajCount][2]);
+    printf("%d: %5.3f\t%5.3f\t%5.3f\n",readTrajCount,qaTraj[readTrajCount][0],qaTraj[readTrajCount][1],qaTraj[readTrajCount][2]);
+    // sscanf(inbuf,"%d\n",&refTraj[readTrajCount]);
+    // printf("%d %d\n",readTrajCount,refTraj[readTrajCount]);
   }
   //
   printf("Done receiving\n");
@@ -230,6 +233,15 @@ void *CAN_thread() {
 
   struct periodic_info info;
 
+  float qa[3] = {-1.6845,-2.6214,-1.4571}; // in degrees: -96.5, -150.2, -83.5
+  // -152.2, -170.2, -27.7 (deg) or -2.6564, -2.9706, -0.4835 (rad)
+  float qu[6];
+  float footPose[3] = {};
+  double wrench[3] = {1,1,1};
+  // double twist[3] = {1,1,1};
+  double torques[3];
+  uint8_t didw2tSucceed = 0;
+
   /****************************************************************************
   * Set up CAN raw socket
   ****************************************************************************/
@@ -303,9 +315,20 @@ void *CAN_thread() {
   make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
   for (k = 0; k < BUFLEN;) {
     // read from the CAN bus:
-    // pthread_mutex_lock(&mutex1);
-    //
-    // pthread_mutex_unlock(&mutex1);
+    pthread_mutex_lock(&mutex1);
+    // temporary kinematics testing location:
+
+    clock_t tic2 = clock();
+    // qa = qaTraj[k];
+    geomFK(qaTraj[k],qu,footPose,1);
+    subchainIK(qaTraj[k],qu,footPose);
+    didw2tSucceed = wrench2torques(qa, qu, torques, wrench);
+    clock_t toc2 = clock();
+
+    printf("Did w2t succeed? Yes (0) / No(1): %d\n",didw2tSucceed);
+    printf("Calculating took %f seconds\n", (double)(toc2 - tic2) / CLOCKS_PER_SEC);
+    printf("torques = [%6.3f, %6.3f, %6.3f]\n",torques[0],torques[1],torques[2]);
+    pthread_mutex_unlock(&mutex1);
 
     // write to the CAN bus:
     frame.data[0] = 0b00101011;
@@ -326,8 +349,8 @@ void *CAN_thread() {
     pthread_mutex_unlock(&mutex1);
     // put stuff in the circular buffer:
     pthread_mutex_lock(&mutex1);
-    printf("CAN thread: %d %d %d\n",refTraj[k],refTraj[k],refTraj[k]);
-    buffer_write(refTraj[k],refTraj[k],refTraj[k]);
+    printf("CAN thread: %5.3f %5.3f %5.3f\n",qaTraj[k][0],qaTraj[k][1],qaTraj[k][2]);
+    buffer_write(qaTraj[k][0],qaTraj[k][1],qaTraj[k][2]);
     pthread_mutex_unlock(&mutex1);
     ++k;
     wait_period(&info);
@@ -339,7 +362,7 @@ void *CAN_thread() {
 
 void *UART_thread() {
   uint16_t j;
-  int16_t bufferval[3];
+  float bufferval[3];
   struct periodic_info info;
 
   /****************************************************************************
@@ -355,8 +378,8 @@ void *UART_thread() {
     // fflush(stdout);
     // sprintf(writemsg,"%d %d %d\n",bufferval[0],bufferval[1],bufferval[2]);
     // dprintf(serial_port,"%d\n",j);
-    dprintf(serial_port,"%d %d %d\n",bufferval[0],bufferval[1],bufferval[2]);
-    printf("UART thread: %d: %d %d %d\n",j,bufferval[0],bufferval[1],bufferval[2]);
+    dprintf(serial_port,"%5.3f %5.3f %5.3f\n",bufferval[0],bufferval[1],bufferval[2]);
+    printf("UART thread: %d: %5.3f %5.3f %5.3f\n",j,bufferval[0],bufferval[1],bufferval[2]);
     // serialPuts(serial_port, writemsg);
     ++j;
     pthread_mutex_unlock(&mutex1);
