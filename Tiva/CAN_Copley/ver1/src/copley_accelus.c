@@ -23,7 +23,7 @@
 #include "utils/uartstdio.h"
 
 #define PWM_PERIOD 640 // f_PWM = fsys/PWM_PERIOD = 16,000,000/PWM_PERIOD
-#define MAX_CUR_MA 21000 // max commandable current (mA)
+#define MAX_CUR_MA 5000 // max commandable current (mA)
 // current resolution = MAX_CUR_MA/(PWM_PERIOD/2)
 #define SLOPE (MAX_CUR_MA/(PWM_PERIOD>>1))
 // #define SLOPE 0.015238095
@@ -91,7 +91,7 @@ uint8_t init_copley(void) {
 uint16_t set_current_mA(int16_t cur_ref_mA) {
   uint16_t pulse_width = PWM_PERIOD>>1; // 50% duty cycle = 0 mA commanded
   if (abs(cur_ref_mA) < MAX_CUR_MA) {
-    pulse_width = (PWM_PERIOD>>1) + cur_ref_mA/SLOPE;
+    pulse_width = (PWM_PERIOD>>1) - cur_ref_mA/SLOPE;
     PWMPulseWidthSet(PWM0_BASE, PWM_OUT_7,pulse_width);
   }
 
