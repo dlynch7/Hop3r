@@ -85,6 +85,8 @@ uint32_t readRLS(void) {
   }
 
   angleDeg = ((pui32DataRx[0]<<6) | (pui32DataRx[1]>>2));
+
+  angleDeg = 3600*angleDeg/8192;
   // angleDeg = 0x3FF & ((pui32DataRx[0]<<8) | (pui32DataRx[1]));
   // angleDeg = 360*angleDeg/16384.0;
   //
