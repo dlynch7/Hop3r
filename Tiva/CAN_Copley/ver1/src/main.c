@@ -68,6 +68,7 @@
 
 #define POS_CTRL_FREQ 1000 // TODO: revert to 1000
 #define MOTOR_ID 1
+#define MOTOR_EN_MASK (1 << (2*MOTOR_ID - 1))
 
 #define PI 3.14159
 
@@ -76,10 +77,12 @@
 // Global variables shared between main loop and motor control ISR
 //
 //*****************************************************************************
-typedef enum {IDLE, CUR_CTRL, POS_CTRL} mode; // define data structure containing modes
+typedef enum {CUR_CTRL, POS_CTRL, IDLE} mode; // define data structure containing modes
 volatile mode MODE;
-int16_t CUR_REF = 0;
-int16_t POS_REF = 0;
+volatile int16_t CAN_REF = 0;
+volatile int16_t CUR_REF = 0;
+volatile int16_t POS_REF = 0;
+volatile uint8_t STATUS = 0;
 
 int16_t TABLE_CUR_REF[4] = {0,20000,0,-30000};
 
@@ -105,7 +108,6 @@ volatile uint32_t g_ui32MsgCount = 0;
 //
 //*****************************************************************************
 volatile bool g_bRXFlag1 = 0;
-volatile bool g_bRXFlag2 = 0;
 
 //*****************************************************************************
 //
@@ -140,7 +142,6 @@ InitConsole(void)
 void
 MotorControllerIntHandler(void)
 {
-    static uint8_t index = 0;
     static uint16_t pulse_width = 0;
 
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
@@ -151,22 +152,28 @@ MotorControllerIntHandler(void)
       case IDLE:
       {
         CUR_REF = 0;
+        pulse_width = set_current_mA(CUR_REF);
         break;
       }
       case CUR_CTRL:
       {
-        // CUR_REF = TABLE_CUR_REF[index];
-        CUR_REF = 1000;
+        CUR_REF = CAN_REF;
         pulse_width = set_current_mA(CUR_REF);
-        UARTprintf("Set current to %d mA = %d pulse width.\n",index,CUR_REF,pulse_width);
         break;
       }
       case POS_CTRL:
       {
+        POS_REF = CAN_REF;
+        pulse_width = set_current_mA(POS_REF); // TODO: DELETE THIS!
         break;
       }
       default:
       {
+        CUR_REF = 0;
+        pulse_width = set_current_mA(CUR_REF);
+        UARTprintf("Unknown operating mode = %d\n", MODE);
+        UARTprintf("MODE = %01X, set current to %d mA = %d pulse width.\n",MODE,CUR_REF,pulse_width);
+        MODE = IDLE;
         break;
       }
     }
@@ -185,6 +192,7 @@ void TimerBegin(){
   TimerConfigure(TIMER0_BASE, TIMER_CFG_PERIODIC); // Configure a 32-bit periodic timer.
   TimerLoadSet(TIMER0_BASE, TIMER_A, SysCtlClockGet() / POS_CTRL_FREQ);
   IntEnable(INT_TIMER0A); // Setup the interrupts for the timer timeouts.
+  IntPrioritySet(INT_TIMER0A, 0x20); // set the Timer 0A interrupt priority to be "low"
   TimerIntEnable(TIMER0_BASE, TIMER_TIMA_TIMEOUT);
   TimerEnable(TIMER0_BASE, TIMER_A); // Enable the timer.
   UARTprintf("Timer A0 initialized!\n");
@@ -251,13 +259,6 @@ CANIntHandler(void)
         g_ui32MsgCount++; // increment a counter to track how many messages have been received
         g_bRXFlag1 = 1; //Set flag to indicate received message is pending for this message object.
         g_bErrFlag = 0; // Since a message was received, clear any error flags.
-    }
-    else if(ui32Status == 2) // Check if the cause is message object 2.
-    {
-        CANIntClear(CAN0_BASE, 2);
-        g_ui32MsgCount++;
-        g_bRXFlag2 = 1;
-        g_bErrFlag = 0;
     }
     else // Otherwise, something unexpected caused the interrupt.
     {
@@ -406,6 +407,8 @@ main(void)
     //
     IntEnable(INT_CAN0);
 
+    IntPrioritySet(INT_CAN0, 0x00); // set the CAN interrupt priority to be "high"
+
     //
     // Enable the CAN for operation.
     //
@@ -429,24 +432,14 @@ main(void)
     //
     CANMessageSet(CAN0_BASE, 1, &sCANMessage, MSG_OBJ_TYPE_RX);
 
-    //
-    // Change the ID to 0x4001, and load into message object 2 which will be
-    // used for receiving any CAN messages with this ID.  Since only the CAN
-    // ID field changes, we don't need to reload all the other fields.
-    //
-    sCANMessage.ui32MsgID = 0x4001; // used for commanded position
-    CANMessageSet(CAN0_BASE, 2, &sCANMessage, MSG_OBJ_TYPE_RX);
-
     TimerBegin();
 
     // set_copley_mode(1);
     // get_copley_mode();
-    MODE = CUR_CTRL;
+    MODE = IDLE;
     set_current_mA(0);
 
-    UARTprintf("Motor 1 node up!\n");
-
-    readRLS();
+    UARTprintf("Motor %d node up!\r\nEnable mask is %d\n", MOTOR_ID, MOTOR_EN_MASK);
 
     //
     // Enter loop to process received messages.  This loop just checks a flag
@@ -497,23 +490,16 @@ main(void)
             // Print information about the message just received.
             //
             // PrintCANMessageInfo(&sCANMessage, 1);
-            CUR_REF = (((pui8MsgData[2*MOTOR_ID]) << 8) | pui8MsgData[2*MOTOR_ID - 1]);
-            // CUR_REF = 1000;
-            // UARTprintf("CUR_REF: %d\n",CUR_REF);
-        }
+            STATUS = pui8MsgData[0];
+            if (STATUS & MOTOR_EN_MASK) {
+              MODE = STATUS & 0x01;
+            } else {
+              MODE = IDLE;
+            }
 
-        //
-        // Check for message received on message object 2.  If so then
-        // read message and print information.
-        //
-        if(g_bRXFlag2)
-        {
-            sCANMessage.pui8MsgData = pui8MsgData;
-            CANMessageGet(CAN0_BASE, 2, &sCANMessage, 0);
-            g_bRXFlag2 = 0;
-            // PrintCANMessageInfo(&sCANMessage, 2);
-            POS_REF = ((((((pui8MsgData[3] << 8)|pui8MsgData[2]) << 8)|pui8MsgData[1]) << 8) | pui8MsgData[0]);
-            // UARTprintf("POS_REF: %d\n",POS_REF);
+            CAN_REF = (((pui8MsgData[2*MOTOR_ID]) << 8) | pui8MsgData[2*MOTOR_ID - 1]);
+            // UARTprintf("CAN_REF: %d\n",CAN_REF);
+            UARTprintf("MODE: %02X, POS_REF: %d\n",MODE,POS_REF);
         }
 
     }
