@@ -41,6 +41,7 @@
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 #include "inc/hw_can.h"
 #include "inc/hw_ints.h"
 #include "inc/hw_memmap.h"
@@ -66,7 +67,9 @@
 #define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
-#define POS_CTRL_FREQ 1000 // TODO: revert to 1000
+#define POS_CTRL_FREQ 100 // TODO: revert to 1000
+// #define DT 1/POS_CTRL_FREQ
+#define DT 0.001
 #define MOTOR_ID 1
 #define MOTOR_EN_MASK (1 << (2*MOTOR_ID - 1))
 
@@ -83,6 +86,17 @@ volatile int16_t CAN_REF = 0;
 volatile int16_t CUR_REF = 0;
 volatile int16_t POS_REF = 0;
 volatile uint8_t STATUS = 0;
+volatile uint32_t pos_deg = 0;
+volatile int32_t pos_err = 0; // position error
+volatile int32_t pos_err_prev = 0; // previous position error, duh
+volatile int32_t dpe_dt = 0; // d/dt of position error
+volatile int32_t pos_err_int = 0; // integral of position error
+volatile int32_t pos_err_int_max = 100; // maximum, anti-windup
+volatile int32_t pos_err_int_min = -100; // minimum, anti-windup
+volatile int16_t pos_cur = 0;
+volatile float Kp = 10000;
+volatile float Kd = 100000;
+volatile float Ki = 0;
 
 int16_t TABLE_CUR_REF[4] = {0,20000,0,-30000};
 
@@ -125,13 +139,20 @@ volatile bool g_bErrFlag = 0;
 void
 InitConsole(void)
 {
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA); // Enable GPIO port A which is used for UART0 pins.
-    GPIOPinConfigure(GPIO_PA0_U0RX); // pin muxing
-    GPIOPinConfigure(GPIO_PA1_U0TX); // pin muxing
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // Enable UART0 so that we can configure the clock.
-    UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC); // Use the internal 16MHz oscillator as the UART clock source.
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1); // Select the alternate (UART) function for these pins.
-    UARTStdioConfig(0, 115200, 16000000); // Initialize the UART for console I/O.
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA); // Enable GPIO port A which is used for UART0 pins.
+  SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // Enable UART0 so that we can configure the clock.
+  GPIOPinConfigure(GPIO_PA0_U0RX); // pin muxing
+  GPIOPinConfigure(GPIO_PA1_U0TX); // pin muxing
+  GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1); // Select the alternate (UART) function for these pins.
+  UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC); // Use the internal 16MHz oscillator as the UART clock source.
+  UARTStdioConfig(0, 115200, 16000000); // Initialize the UART for console I/O.
+    // SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA); // Enable GPIO port A which is used for UART0 pins.
+    // SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0); // Enable UART0 so that we can configure the clock.
+    // GPIOPinConfigure(GPIO_PA0_U0RX); // pin muxing
+    // GPIOPinConfigure(GPIO_PA1_U0TX); // pin muxing
+    // UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC); // Use the internal 16MHz oscillator as the UART clock source.
+    // GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1); // Select the alternate (UART) function for these pins.
+    // UARTStdioConfig(0, 115200, 16000000); // Initialize the UART for console I/O.
 }
 
 //*****************************************************************************
@@ -143,10 +164,21 @@ void
 MotorControllerIntHandler(void)
 {
     static uint16_t pulse_width = 0;
+    // static int32_t pos_err = 0;
+    // static uint32_t pos_deg0 = 0; // TODO: comment this back in later
+    // static uint32_t pos_deg1 = 0; // TODO: comment this back in later
+    // static uint32_t pos_deg2 = 0; // TODO: comment this back in later
+    // static uint32_t pos_deg3 = 0; // TODO: comment this back in later
 
     TimerIntClear(TIMER0_BASE, TIMER_TIMA_TIMEOUT); // Clear the timer interrupt.
 
-    readRLS();
+    pos_deg = readRLS();
+    // pos_deg0 = readRLS();
+    // pos_deg1 = readRLS();
+    // pos_deg2 = readRLS();
+    // pos_deg3 = readRLS();
+    //
+    // pos_deg = (pos_deg0 + pos_deg1 + pos_deg2 + pos_deg3)>>2;
 
     switch (MODE) {
       case IDLE:
@@ -163,8 +195,30 @@ MotorControllerIntHandler(void)
       }
       case POS_CTRL:
       {
-        POS_REF = CAN_REF;
-        pulse_width = set_current_mA(POS_REF); // TODO: DELETE THIS!
+        // POS_REF = CAN_REF/10; // made-up position reference signal
+        POS_REF = 1800;
+
+        // calculate error and stuff:
+        pos_err = POS_REF - pos_deg;
+
+        dpe_dt = (pos_err - pos_err_prev);
+        // pos_err_int = pos_err_int + ((int32_t) (((float) pos_err)/1000));
+        //
+        // // anti-windup:
+        // if (pos_err_int >= pos_err_int_max) { // ceiling
+        //   pos_err_int = pos_err_int_max;
+        // } else if (pos_err_int <= pos_err_int_min) { // floor
+        //   pos_err_int = pos_err_int_min;
+        // }
+
+        // PID position controller:
+        // pos_cur = ((int32_t) Kp*((float) pos_err) + Kd*dpe_dt);
+        pos_cur = ((int16_t) Kp*((float) pos_err))/1000;
+        // pos_cur = ((int32_t) Kp*pos_err + Ki*pos_err_int + Kd*dpe_dt);
+
+        pos_err_prev = pos_err; // set up for next time thru loop
+
+        pulse_width = set_current_mA(pos_cur);
         break;
       }
       default:
@@ -178,7 +232,7 @@ MotorControllerIntHandler(void)
       }
     }
     HWREGBITW(&g_ui32Flags, 0) ^= 1; // Toggle the flag for the first timer.
-    GPIOPinWrite(GPIO_PORTF_BASE, LED_RED, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_BLUE, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
 }
 
 //*****************************************************************************
@@ -321,8 +375,8 @@ main(void)
     initRLS();
 
     // Rx: light up GREEN LED
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
     if (init_copley()) {
       UARTprintf("Failed to initialize Copley Accelus.\n");
@@ -436,7 +490,7 @@ main(void)
 
     // set_copley_mode(1);
     // get_copley_mode();
-    MODE = IDLE;
+    MODE = POS_CTRL;
     set_current_mA(0);
 
     UARTprintf("Motor %d node up!\r\nEnable mask is %d\n", MOTOR_ID, MOTOR_EN_MASK);
@@ -498,10 +552,9 @@ main(void)
             }
 
             CAN_REF = (((pui8MsgData[2*MOTOR_ID]) << 8) | pui8MsgData[2*MOTOR_ID - 1]);
-            // UARTprintf("CAN_REF: %d\n",CAN_REF);
-            UARTprintf("MODE: %02X, POS_REF: %d\n",MODE,POS_REF);
         }
-
+        UARTprintf("MODE: %02X, POS_REF: %d, POS_DEG: %d, POS_ERR: %d, dE/dt: %d, cur_cmd: %d mA\n",\
+          MODE,POS_REF,pos_deg,pos_err,dpe_dt,pos_cur);
     }
 
     //
