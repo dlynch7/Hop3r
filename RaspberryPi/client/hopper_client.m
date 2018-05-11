@@ -1,5 +1,8 @@
 function hopper_client
-
+    clear;
+    close all;
+    clc;
+    
     port='/dev/ttyUSB0';
     if ~isempty(instrfind)
         fclose(instrfind);
