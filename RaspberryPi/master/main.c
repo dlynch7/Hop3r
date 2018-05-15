@@ -61,7 +61,6 @@
 #include <linux/can/raw.h>
 #include <math.h>
 #include <net/if.h>
-// #include <poll.h>
 #include <pthread.h>
 #include <signal.h>
 #include <stdint.h>
@@ -231,6 +230,10 @@ void *CAN_thread() {
   struct can_frame frame;
   struct ifreq ifr;
 
+  struct iovec iov;
+	struct msghdr msg;
+  char ctrlmsg[CMSG_SPACE(sizeof(struct timeval)) + CMSG_SPACE(sizeof(__u32))];
+
   struct periodic_info info;
 
   float qa[3] = {-1.6845,-2.6214,-1.4571}; // in degrees: -96.5, -150.2, -83.5
@@ -241,6 +244,7 @@ void *CAN_thread() {
   // double twist[3] = {1,1,1};
   double torques[3];
   uint8_t didw2tSucceed = 0;
+  uint16_t qaTrajk0,qaTrajk1,qaTrajk2;
 
   /****************************************************************************
   * Set up CAN raw socket
@@ -290,7 +294,7 @@ void *CAN_thread() {
   printf("CAN socket set up complete!\n");
 
   /* parse bogus CAN frame */
-	if (parse_canframe("00003001#0000000000000000", &frame)){
+	if (parse_canframe("00004001#0000000000000000", &frame)){
 		fprintf(stderr, "\nWrong CAN-frame format!\n\n");
 		fprintf(stderr, "Try: <can_id>#{R|data}\n");
 		fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
@@ -301,6 +305,14 @@ void *CAN_thread() {
 		fprintf(stderr, "for remote transmission request.\n\n");
 		return NULL;
 	}
+
+  /* these settings are static and can be held out of the hot path */
+  iov.iov_base = &frame;
+  msg.msg_name = &addr;
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = &ctrlmsg;
+
   // if you don't have access to the CAN bus, comment out up to the line above.
   // Make sure both mutex lock and unlock are either both commented out or
   // neither commented out.
@@ -315,29 +327,47 @@ void *CAN_thread() {
   make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
   for (k = 0; k < BUFLEN;) {
     // read from the CAN bus:
-    pthread_mutex_lock(&mutex1);
-    // temporary kinematics testing location:
+    // pthread_mutex_lock(&mutex1);
 
-    clock_t tic2 = clock();
-    // qa = qaTraj[k];
-    geomFK(qaTraj[k],qu,footPose,1);
-    subchainIK(qaTraj[k],qu,footPose);
-    didw2tSucceed = wrench2torques(qa, qu, torques, wrench);
-    clock_t toc2 = clock();
+    /* these settings may be modified by recvmsg() */
+    // nbytes = read(s, &frame, sizeof(struct can_frame));
+    //
+    // if (nbytes < 0) {
+    //         perror("can raw socket read");
+    //         return NULL;
+    // }
+    //
+    // /* paranoid check ... */
+    // if (nbytes < sizeof(struct can_frame)) {
+    //         fprintf(stderr, "read: incomplete CAN frame\n");
+    //         return NULL;
+    // }
 
-    printf("Did w2t succeed? Yes (0) / No(1): %d\n",didw2tSucceed);
-    printf("Calculating took %f seconds\n", (double)(toc2 - tic2) / CLOCKS_PER_SEC);
-    printf("torques = [%6.3f, %6.3f, %6.3f]\n",torques[0],torques[1],torques[2]);
-    pthread_mutex_unlock(&mutex1);
+    // // temporary kinematics testing location:
+    //
+    // clock_t tic2 = clock();
+    // // qa = qaTraj[k];
+    // geomFK(qaTraj[k],qu,footPose,1);
+    // subchainIK(qaTraj[k],qu,footPose);
+    // didw2tSucceed = wrench2torques(qa, qu, torques, wrench);
+    // clock_t toc2 = clock();
+    //
+    // // printf("Did w2t succeed? Yes (0) / No(1): %d\n",didw2tSucceed);
+    // // printf("Calculating took %f seconds\n", (double)(toc2 - tic2) / CLOCKS_PER_SEC);
+    // // printf("torques = [%6.3f, %6.3f, %6.3f]\n",torques[0],torques[1],torques[2]);
+    // pthread_mutex_unlock(&mutex1);
+    qaTrajk0 = ((int16_t) 4500 + qaTraj[k][0]);
+    qaTrajk1 = ((int16_t) 4500 + qaTraj[k][1]);
+    qaTrajk2 = ((int16_t) 4500 + qaTraj[k][2]);
 
     // write to the CAN bus:
     frame.data[0] = 0b00101011;
-    frame.data[1] = (refTraj[k] & 0x00FF);
-    frame.data[2] = (refTraj[k] & 0xFF00) >> 8;
-    frame.data[3] = (refTraj[k] & 0x00FF);
-    frame.data[4] = (refTraj[k] & 0xFF00) >> 8;
-    frame.data[5] = (refTraj[k] & 0x00FF);
-    frame.data[6] = (refTraj[k] & 0xFF00) >> 8;
+    frame.data[1] = (qaTrajk0 & 0x00FF);
+    frame.data[2] = (qaTrajk0 & 0xFF00) >> 8;
+    frame.data[3] = (qaTrajk1 & 0x00FF);
+    frame.data[4] = (qaTrajk1 & 0xFF00) >> 8;
+    frame.data[5] = (qaTrajk2 & 0x00FF);
+    frame.data[6] = (qaTrajk2 & 0xFF00) >> 8;
     pthread_mutex_lock(&mutex1);
   	if ((nbytes = write(s, &frame, sizeof(frame))) != sizeof(frame)) {
   		perror("write");
