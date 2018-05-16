@@ -228,6 +228,7 @@ void *CAN_thread() {
   int nbytes;
   struct sockaddr_can addr;
   struct can_frame frame;
+  struct can_frame frame2;
   struct ifreq ifr;
 
   struct iovec iov;
@@ -278,7 +279,8 @@ void *CAN_thread() {
 	/* This is obsolete as we do not read from the socket at all, but for */
 	/* this reason we can remove the receive list in the Kernel to save a */
 	/* little (really a very little!) CPU usage.                          */
-	setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+	// setsockopt(s, SOL_CAN_RAW, CAN_RAW_FILTER, NULL, 0);
+  
 
 	if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
 		perror("\tbind");
@@ -305,13 +307,7 @@ void *CAN_thread() {
 		fprintf(stderr, "for remote transmission request.\n\n");
 		return NULL;
 	}
-
-  /* these settings are static and can be held out of the hot path */
-  iov.iov_base = &frame;
-  msg.msg_name = &addr;
-  msg.msg_iov = &iov;
-  msg.msg_iovlen = 1;
-  msg.msg_control = &ctrlmsg;
+  printf("CAN frame ID: %X\n",frame.can_id);
 
   // if you don't have access to the CAN bus, comment out up to the line above.
   // Make sure both mutex lock and unlock are either both commented out or
@@ -327,21 +323,14 @@ void *CAN_thread() {
   make_periodic(CAN_PERIOD_US, &info); // period (first argument) in microseconds
   for (k = 0; k < BUFLEN;) {
     // read from the CAN bus:
-    // pthread_mutex_lock(&mutex1);
+    pthread_mutex_lock(&mutex1);
 
-    /* these settings may be modified by recvmsg() */
-    // nbytes = read(s, &frame, sizeof(struct can_frame));
-    //
-    // if (nbytes < 0) {
-    //         perror("can raw socket read");
-    //         return NULL;
-    // }
-    //
-    // /* paranoid check ... */
-    // if (nbytes < sizeof(struct can_frame)) {
-    //         fprintf(stderr, "read: incomplete CAN frame\n");
-    //         return NULL;
-    // }
+    nbytes = read(s, &frame2, sizeof(frame2));
+		printf("Read %d bytes:\n", nbytes);
+		printf("\tframe.can_id  = %X\n",frame2.can_id);
+		printf("\tframe.can_dlc = %X\n",frame2.can_dlc);
+		printf("\tframe.data[0]  = %X\n",frame2.data[0]);
+		printf("\tframe.data[1]  = %X\n",frame2.data[1]);
 
     // // temporary kinematics testing location:
     //
@@ -355,12 +344,13 @@ void *CAN_thread() {
     // // printf("Did w2t succeed? Yes (0) / No(1): %d\n",didw2tSucceed);
     // // printf("Calculating took %f seconds\n", (double)(toc2 - tic2) / CLOCKS_PER_SEC);
     // // printf("torques = [%6.3f, %6.3f, %6.3f]\n",torques[0],torques[1],torques[2]);
-    // pthread_mutex_unlock(&mutex1);
-    qaTrajk0 = ((int16_t) 4500 + qaTraj[k][0]);
-    qaTrajk1 = ((int16_t) 4500 + qaTraj[k][1]);
-    qaTrajk2 = ((int16_t) 4500 + qaTraj[k][2]);
+    pthread_mutex_unlock(&mutex1);
+    qaTrajk0 = ((int16_t) 2700 + qaTraj[k][0]);
+    qaTrajk1 = ((int16_t) 2700 + qaTraj[k][1]);
+    qaTrajk2 = ((int16_t) 2700 + qaTraj[k][2]);
 
     // write to the CAN bus:
+    frame.can_id = 0x00000401;
     frame.data[0] = 0b00101011;
     frame.data[1] = (qaTrajk0 & 0x00FF);
     frame.data[2] = (qaTrajk0 & 0xFF00) >> 8;
