@@ -193,34 +193,26 @@ void
 InitConsole(void)
 {
     //
-    // Enable GPIO port A which is used for UART0 pins.
-    // TODO: change this to whichever GPIO port you are using.
+    // Enable the GPIO Peripheral used by the UART.
     //
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
     //
-    // Configure the pin muxing for UART0 functions on port A0 and A1.
-    // This step is not necessary if your part does not support pin muxing.
-    // TODO: change this to select the port/pin you are using.
+    // Enable UART0
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+
+    //
+    // Configure GPIO Pins for UART mode.
     //
     GPIOPinConfigure(GPIO_PA0_U0RX);
     GPIOPinConfigure(GPIO_PA1_U0TX);
-
-    //
-    // Enable UART0 so that we can configure the clock.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_UART0);
+    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     //
     // Use the internal 16MHz oscillator as the UART clock source.
     //
     UARTClockSourceSet(UART0_BASE, UART_CLOCK_PIOSC);
-
-    //
-    // Select the alternate (UART) function for these pins.
-    // TODO: change this to select the port/pin you are using.
-    //
-    GPIOPinTypeUART(GPIO_PORTA_BASE, GPIO_PIN_0 | GPIO_PIN_1);
 
     //
     // Initialize the UART for console I/O.
@@ -411,10 +403,25 @@ main(void)
 #endif
 
     //
+    // Enable the GPIO port that is used for the on-board LED.
+    //
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
+
+    //
+    // Enable the GPIO pins for the LED (PD2 & PD3).
+    //
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_2);
+    GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, GPIO_PIN_3);
+
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
+    GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, GPIO_PIN_3);
+
+    //
     // Set up the serial console to use for displaying messages.  This is
     // just for this example program and is not needed for CAN operation.
     //
     InitConsole();
+    UARTprintf("Hello world!");
 
     //initialize I2C module 0
     InitI2C0();
@@ -428,43 +435,43 @@ main(void)
     LSM6DS33_init();
     UARTprintf("IMU initialized!\n");
 
+    // //
+    // // For this example CAN0 is used with RX and TX pins on port B4 and B5.
+    // // The actual port and pins used may be different on your part, consult
+    // // the data sheet for more information.
+    // // GPIO port B needs to be enabled so these pins can be used.
+    // // TODO: change this to whichever GPIO port you are using
+    // //
+    // SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE);
     //
-    // For this example CAN0 is used with RX and TX pins on port B4 and B5.
-    // The actual port and pins used may be different on your part, consult
-    // the data sheet for more information.
-    // GPIO port B needs to be enabled so these pins can be used.
-    // TODO: change this to whichever GPIO port you are using
+    // //
+    // // Configure the GPIO pin muxing to select CAN0 functions for these pins.
+    // // This step selects which alternate function is available for these pins.
+    // // This is necessary if your part supports GPIO pin function muxing.
+    // // Consult the data sheet to see which functions are allocated per pin.
+    // // TODO: change this to select the port/pin you are using
+    // //
+    // GPIOPinConfigure(GPIO_PE4_CAN0RX);
+    // GPIOPinConfigure(GPIO_PE5_CAN0TX);
     //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
-
+    // //
+    // // Enable the alternate function on the GPIO pins.  The above step selects
+    // // which alternate function is available.  This step actually enables the
+    // // alternate function instead of GPIO for these pins.
+    // // TODO: change this to match the port/pin you are using
+    // //
+    // GPIOPinTypeCAN(GPIO_PORTE_BASE, GPIO_PIN_4 | GPIO_PIN_5);
     //
-    // Configure the GPIO pin muxing to select CAN0 functions for these pins.
-    // This step selects which alternate function is available for these pins.
-    // This is necessary if your part supports GPIO pin function muxing.
-    // Consult the data sheet to see which functions are allocated per pin.
-    // TODO: change this to select the port/pin you are using
+    // //
+    // // The GPIO port and pins have been set up for CAN.  The CAN peripheral
+    // // must be enabled.
+    // //
+    // SysCtlPeripheralEnable(SYSCTL_PERIPH_CAN0);
     //
-    GPIOPinConfigure(GPIO_PB4_CAN0RX);
-    GPIOPinConfigure(GPIO_PB5_CAN0TX);
-
-    //
-    // Enable the alternate function on the GPIO pins.  The above step selects
-    // which alternate function is available.  This step actually enables the
-    // alternate function instead of GPIO for these pins.
-    // TODO: change this to match the port/pin you are using
-    //
-    GPIOPinTypeCAN(GPIO_PORTB_BASE, GPIO_PIN_4 | GPIO_PIN_5);
-
-    //
-    // The GPIO port and pins have been set up for CAN.  The CAN peripheral
-    // must be enabled.
-    //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_CAN0);
-
-    //
-    // Initialize the CAN controller
-    //
-    CANInit(CAN0_BASE);
+    // //
+    // // Initialize the CAN controller
+    // //
+    // CANInit(CAN0_BASE);
 
     //
     // Set up the bit rate for the CAN bus.  This function sets up the CAN
@@ -481,15 +488,15 @@ main(void)
     // 8000000.  Consult the data sheet for more information about CAN
     // peripheral clocking.
     //
-    uint32_t canbitrate_actual;
-#if defined(TARGET_IS_TM4C129_RA0) ||                                         \
-    defined(TARGET_IS_TM4C129_RA1) ||                                         \
-    defined(TARGET_IS_TM4C129_RA2)
-    CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
-#else
-    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000); // 5 kHz lulz
-#endif
-    UARTprintf("CAN bit rate set at %d bps.\n", canbitrate_actual);
+//     uint32_t canbitrate_actual;
+/* #if defined(TARGET_IS_TM4C129_RA0) ||                                         \
+//     defined(TARGET_IS_TM4C129_RA1) ||                                         \
+//     defined(TARGET_IS_TM4C129_RA2)
+//     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
+// #else
+//     canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000); // 5 kHz lulz
+// #endif
+//     UARTprintf("CAN bit rate set at %d bps.\n", canbitrate_actual); */
 
     //
     // Enable interrupts on the CAN peripheral.  This example uses static
@@ -498,42 +505,42 @@ main(void)
     // allocation of the vector table, then you must also call CANIntRegister()
     // here.
     //
-    CANIntRegister(CAN0_BASE, CANIntHandler); // if using dynamic vectors
+    // CANIntRegister(CAN0_BASE, CANIntHandler); // if using dynamic vectors
+    // //
+    // CANIntEnable(CAN0_BASE, CAN_INT_MASTER | CAN_INT_ERROR | CAN_INT_STATUS);
     //
-    CANIntEnable(CAN0_BASE, CAN_INT_MASTER | CAN_INT_ERROR | CAN_INT_STATUS);
-
+    // //
+    // // Enable the CAN interrupt on the processor (NVIC).
+    // //
+    // IntEnable(INT_CAN0);
     //
-    // Enable the CAN interrupt on the processor (NVIC).
-    //
-    IntEnable(INT_CAN0);
-
-    //
-    // Enable the CAN for operation.
-    //
-    CANEnable(CAN0_BASE);
+    // //
+    // // Enable the CAN for operation.
+    // //
+    // CANEnable(CAN0_BASE);
 
     // Initialize message object 1 to be able to send CAN message 1.  This
     // message object is not shared so it only needs to be initialized one
     // time, and can be used for repeatedly sending the same message ID.
     //
-    g_sCANMsgObject1.ui32MsgID = 0x2001;
-    g_sCANMsgObject1.ui32MsgIDMask = 0;
-    g_sCANMsgObject1.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
-    g_sCANMsgObject1.ui32MsgLen = sizeof(g_pui8Msg1);
-    g_sCANMsgObject1.pui8MsgData = g_pui8Msg1;
-
+    // g_sCANMsgObject1.ui32MsgID = 0x2001;
+    // g_sCANMsgObject1.ui32MsgIDMask = 0;
+    // g_sCANMsgObject1.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
+    // g_sCANMsgObject1.ui32MsgLen = sizeof(g_pui8Msg1);
+    // g_sCANMsgObject1.pui8MsgData = g_pui8Msg1;
     //
-    // Initialize message object 2 to be able to send CAN message 2.  This
-    // message object is not shared so it only needs to be initialized one
-    // time, and can be used for repeatedly sending the same message ID.
+    // //
+    // // Initialize message object 2 to be able to send CAN message 2.  This
+    // // message object is not shared so it only needs to be initialized one
+    // // time, and can be used for repeatedly sending the same message ID.
+    // //
+    // g_sCANMsgObject2.ui32MsgID = 0x1001;
+    // g_sCANMsgObject2.ui32MsgIDMask = 0;
+    // g_sCANMsgObject2.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
+    // g_sCANMsgObject2.ui32MsgLen = sizeof(g_pui8Msg2);
+    // g_sCANMsgObject2.pui8MsgData = g_pui8Msg2;
     //
-    g_sCANMsgObject2.ui32MsgID = 0x1001;
-    g_sCANMsgObject2.ui32MsgIDMask = 0;
-    g_sCANMsgObject2.ui32Flags = MSG_OBJ_TX_INT_ENABLE;
-    g_sCANMsgObject2.ui32MsgLen = sizeof(g_pui8Msg2);
-    g_sCANMsgObject2.pui8MsgData = g_pui8Msg2;
-
-    UARTprintf("CAN0 enabled!\n");
+    // UARTprintf("CAN0 enabled!\n");
 
     ADCenable();
     uint32_t fz_adc = 0; // initialize
@@ -547,9 +554,6 @@ main(void)
     UARTprintf("  Update Rate: 250ms\n");
     UARTprintf("  Input Pin: AIN0/PE3\n\n");
 
-		SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOF);
-    GPIOPinTypeGPIOOutput(GPIO_PORTF_BASE, LED_RED|LED_BLUE|LED_GREEN);
-
 		//
     // Enter loop to send messages.  A new message will be sent once per
     // second.  The 4 bytes of message content will be treated as an uint32_t
@@ -557,6 +561,12 @@ main(void)
     //
     while(1)
     {
+
+        //
+        // Turn on the LED.
+        //
+        GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, GPIO_PIN_2);
+        GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, GPIO_PIN_3);
 
         // Ax = getxXL();
         // Ay = getyXL();
@@ -574,17 +584,17 @@ main(void)
         // CANMessageSet() function will cause the message to be sent right
         // away.
         //
-        PrintCANMessageInfo(&g_sCANMsgObject1, 1);
-        CANMessageSet(CAN0_BASE, 1, &g_sCANMsgObject1, MSG_OBJ_TYPE_TX);
-
+        // PrintCANMessageInfo(&g_sCANMsgObject1, 1);
+        // CANMessageSet(CAN0_BASE, 1, &g_sCANMsgObject1, MSG_OBJ_TYPE_TX);
         //
-        // Send message 2 using CAN controller message object 2.  This is
-        // the only message sent using this message object.  The
-        // CANMessageSet() function will cause the message to be sent right
-        // away.
-        //
-        PrintCANMessageInfo(&g_sCANMsgObject2, 2);
-        CANMessageSet(CAN0_BASE, 2, &g_sCANMsgObject2, MSG_OBJ_TYPE_TX);
+        // //
+        // // Send message 2 using CAN controller message object 2.  This is
+        // // the only message sent using this message object.  The
+        // // CANMessageSet() function will cause the message to be sent right
+        // // away.
+        // //
+        // PrintCANMessageInfo(&g_sCANMsgObject2, 2);
+        // CANMessageSet(CAN0_BASE, 2, &g_sCANMsgObject2, MSG_OBJ_TYPE_TX);
 
 				// UARTprintf("...preceding CAN interrupt...");
 				// UARTprintf("...CAN Interrupt status: %X ...",echoCanInterruptStatus);
@@ -611,19 +621,27 @@ main(void)
         SimpleShortDelay();
 
         //
+        // Turn off the BLUE LED.
+        //
+        GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_2, 0);
+        GPIOPinWrite(GPIO_PORTD_BASE, GPIO_PIN_3, 0);
+
+        SimpleShortDelay();
+
+        //
         // Check the error flag to see if errors occurred
         //
-        if(g_bErrFlag)
-        {
-            UARTprintf(" error - cable connected?\n");
-        }
-        else
-        {
-            //
-            // If no errors then print the count of message sent
-            //
-            UARTprintf(" total count = %u\n", g_ui32Msg1Count + g_ui32Msg2Count);
-        }
+        // if(g_bErrFlag)
+        // {
+        //     UARTprintf(" error - cable connected?\n");
+        // }
+        // else
+        // {
+        //     //
+        //     // If no errors then print the count of message sent
+        //     //
+        //     UARTprintf(" total count = %u\n", g_ui32Msg1Count + g_ui32Msg2Count);
+        // }
 
 
         // Change the value in the message data for each of the messages.
