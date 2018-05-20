@@ -134,7 +134,9 @@ int writePosToCAN(double *pos_deg_arr) {
   qa_deg10[2] = ((int) (10*pos_deg_arr[2]));
 
   writeFrame.can_id = MOTOR_CMD_ID;
+  // set mode to position control and enable motors:
   writeFrame.data[0] = (MODE_POS_CTRL | MOTOR_3_EN | MOTOR_2_EN | MOTOR_1_EN);
+  // set data bytes to reference positions:
   writeFrame.data[1] = (qa_deg10[0] & 0x00FF);
   writeFrame.data[2] = (qa_deg10[0] & 0xFF00) >> 8;
   writeFrame.data[3] = (qa_deg10[1] & 0x00FF);
@@ -145,7 +147,41 @@ int writePosToCAN(double *pos_deg_arr) {
   pthread_mutex_lock(&mutex1);
   if ((nbytes = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
     perror("write");
-    pthread_mutex_unlock(&mutex1);
+    pthread_mutex_unlock(&mutex1); // still have to unlock the mutex!
+    return 1;
+  }
+  pthread_mutex_unlock(&mutex1);
+
+  return 0;
+}
+
+// write 3 reference joint torques to CAN:
+int writeTrqToCAN(double *trq_Nm_arr) {
+  int16_t qa_trq_mNm[3];
+
+  // *trq_Nm_arr is a pointer to an array of 3 joint positions, represented as doubles.
+  // The motor controllers expect reference torques in mNm,
+  // represented as int16_t's, so we must multiply the elements in trq_Nm_arr
+  // by 1000, and then cast to int16_t:
+  qa_trq_mNm[0] = ((int) (1000*trq_Nm_arr[0]));
+  qa_trq_mNm[1] = ((int) (1000*trq_Nm_arr[1]));
+  qa_trq_mNm[2] = ((int) (1000*trq_Nm_arr[2]));
+
+  writeFrame.can_id = MOTOR_CMD_ID;
+  // set mode to torque control and enable motors:
+  writeFrame.data[0] = (MODE_TRQ_CTRL | MOTOR_3_EN | MOTOR_2_EN | MOTOR_1_EN);
+  // set data bytes to reference torques:
+  writeFrame.data[1] = (qa_trq_mNm[0] & 0x00FF);
+  writeFrame.data[2] = (qa_trq_mNm[0] & 0xFF00) >> 8;
+  writeFrame.data[3] = (qa_trq_mNm[1] & 0x00FF);
+  writeFrame.data[4] = (qa_trq_mNm[1] & 0xFF00) >> 8;
+  writeFrame.data[5] = (qa_trq_mNm[2] & 0x00FF);
+  writeFrame.data[6] = (qa_trq_mNm[2] & 0xFF00) >> 8;
+
+  pthread_mutex_lock(&mutex1);
+  if ((nbytes = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
+    perror("write");
+    pthread_mutex_unlock(&mutex1); // still have to unlock the mutex!
     return 1;
   }
   pthread_mutex_unlock(&mutex1);
