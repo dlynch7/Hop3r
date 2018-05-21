@@ -17,6 +17,8 @@ struct periodic_info {
 	sigset_t alarm_sig;
 };
 
+pthread_mutex_t mutex1;
+
 int make_periodic(int unsigned period, struct periodic_info *info);
 
 void wait_period(struct periodic_info *info);

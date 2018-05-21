@@ -52,6 +52,8 @@ int setup_periodic(void) {
   sigset_t alarm_sig;
 	int i;
 
+	pthread_mutex_init(&mutex1, NULL);
+
 	printf("Periodic threads using POSIX timers\n");
 
 	/* Block all real time signals so they can be used for the timers.
