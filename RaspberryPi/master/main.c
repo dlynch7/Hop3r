@@ -75,12 +75,12 @@
 #include <wiringPi.h>
 #include <wiringSerial.h>
 
-#include "linux-can-utils/lib.h"
+#include "can_io.h"
 #include "circ_buffer.h"
 #include "kinematic.h"
+#include "linux-can-utils/lib.h"
 #include "per_threads.h"
 #include "serial_interface.h"
-#include "can_io.h"
 
 #define CONTROL_PERIOD_US 2000
 #define UART_PERIOD_US 2000
@@ -92,7 +92,7 @@
 void *Control_thread();
 void *CAN_read_thread();
 void *UART_thread();
-pthread_mutex_t mutex1 = PTHREAD_MUTEX_INITIALIZER;
+
 uint8_t Control_thread_begin; // thread must wait for begin = 1
 uint8_t CAN_read_thread_begin; // thread must wait for begin = 1
 uint8_t UART_thread_begin; // thread must wait for begin = 1
@@ -124,7 +124,9 @@ int main(void) {
   }
   printf("Initialized SocketCAN interface.\n");
 
-  readCAN(*dataFromCAN);
+  readCAN(&dataFromCAN);
+  double trqArr[3] = {0.0, 1.0, -2.0};
+  writePosToCAN(trqArr);
 
   printf("Buffer read index: %d\n",get_read_index());
   printf("Buffer write index: %d\n",get_write_index());
@@ -233,8 +235,8 @@ void *CAN_read_thread() { // non-periodic thread
   while (CAN_read_thread_begin) {
     // pthread_mutex_lock(&mutex1);
 
-    nbytes = read(s, &readFrame, sizeof(readFrame));
-    printf("Read %d bytes:\n", nbytes);
+    nbytesR = read(s, &readFrame, sizeof(readFrame));
+    printf("Read %d bytes:\n", nbytesR);
     printf("\tframe.can_id  = %X\n",readFrame.can_id);
     // pthread_mutex_unlock(&mutex1);
   }
@@ -305,7 +307,7 @@ void *Control_thread() { // periodic thread
     writeFrame.data[5] = (qaTrajk2 & 0x00FF);
     writeFrame.data[6] = (qaTrajk2 & 0xFF00) >> 8;
     pthread_mutex_lock(&mutex1);
-  	if ((nbytes = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
+  	if ((nbytesW = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
   		perror("write");
   	}
     /* get interface name of the received CAN frame */
