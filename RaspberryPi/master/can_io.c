@@ -53,11 +53,12 @@ int initSocketCAN(void) { // set up CAN raw socket
 
 // get data from CAN, parse it, and put it into a struct of type can_input_struct:
 int readCAN(can_input_struct *ptr) {
-  nbytes = read(s, &readFrame, sizeof(readFrame));
-  printf("Read %d bytes:\n", nbytes);
+  nbytesR = read(s, &readFrame, sizeof(readFrame));
+  printf("Read %d bytes:\n", nbytesR);
   printf("\tframe.can_id  = %X\n",readFrame.can_id);
+  printf("\tmasked ID  = %X\n",readFrame.can_id & 0x0FFFFFFF);
 
-  switch (readFrame.can_id) {
+  switch (readFrame.can_id & 0x0FFFFFFF) {
     // if the received CAN frame ID indicates a joint position:
     case MOTOR_1_POS_CAN_ID:
     {
@@ -115,7 +116,7 @@ int readCAN(can_input_struct *ptr) {
       break;
     }
     default: // CAN frame does not match any known IDs
-      fprintf(stderr,"The received CAN frame does not match any know IDs.\n");
+      fprintf(stderr,"The received CAN frame does not match any known IDs.\n");
       return 1;
   }
   return 0;
@@ -145,7 +146,7 @@ int writePosToCAN(double *pos_deg_arr) {
   writeFrame.data[6] = (qa_deg10[2] & 0xFF00) >> 8;
 
   pthread_mutex_lock(&mutex1);
-  if ((nbytes = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
+  if ((nbytesW = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
     perror("write");
     pthread_mutex_unlock(&mutex1); // still have to unlock the mutex!
     return 1;
@@ -179,7 +180,7 @@ int writeTrqToCAN(double *trq_Nm_arr) {
   writeFrame.data[6] = (qa_trq_mNm[2] & 0xFF00) >> 8;
 
   pthread_mutex_lock(&mutex1);
-  if ((nbytes = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
+  if ((nbytesW = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
     perror("write");
     pthread_mutex_unlock(&mutex1); // still have to unlock the mutex!
     return 1;

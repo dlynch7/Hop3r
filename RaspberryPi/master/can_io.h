@@ -13,8 +13,13 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 
+#include <pthread.h>
+
 #include <linux/can.h>
 #include <linux/can/raw.h>
+
+#include "linux-can-utils/lib.h"
+#include "per_threads.h"
 
 #define MOTOR_1_EN 0b00000010
 #define MOTOR_2_EN 0b00001000
@@ -25,17 +30,17 @@
 
 // CAN IDs:
 // TODO: make sure ID makes sense with message frequency
-#define MOTOR_CMD_ID 0x00004001 // TODO: finalize ID: 0
-#define MOTOR_1_POS_CAN_ID // TODO: finalize ID: 2
-#define MOTOR_2_POS_CAN_ID // TODO: finalize ID: 3
-#define MOTOR_3_POS_CAN_ID // TODO: finalize ID: 4
-#define MOTOR_1_CUR_CAN_ID // TODO: finalize ID: 5
-#define MOTOR_2_CUR_CAN_ID // TODO: finalize ID: 6
-#define MOTOR_3_CUR_CAN_ID // TODO: finalize ID: 7
-#define IMU_FZ_CAN_ID // TODO: finalize ID: 8
-#define BOOM_ROLL_CAN_ID // TODO: finalize ID: 9
-#define BOOM_PITCH_CAN_ID // TODO: finalize ID: 10
-#define BOOM_YAW_CAN_ID // TODO: finalize ID: 11
+#define MOTOR_CMD_ID 0x00007001 // TODO: finalize ID: 0
+#define MOTOR_1_POS_CAN_ID 0x00006001 // TODO: finalize ID: 2
+#define MOTOR_2_POS_CAN_ID 3 // TODO: finalize ID: 3
+#define MOTOR_3_POS_CAN_ID 4 // TODO: finalize ID: 4
+#define MOTOR_1_CUR_CAN_ID 5 // TODO: finalize ID: 5
+#define MOTOR_2_CUR_CAN_ID 6 // TODO: finalize ID: 6
+#define MOTOR_3_CUR_CAN_ID 7 // TODO: finalize ID: 7
+#define IMU_FZ_CAN_ID 8 // TODO: finalize ID: 8
+#define BOOM_ROLL_CAN_ID 9 // TODO: finalize ID: 9
+#define BOOM_PITCH_CAN_ID 10 // TODO: finalize ID: 10
+#define BOOM_YAW_CAN_ID 11 // TODO: finalize ID: 11
 
 int s; // can raw socket
 int nbytesR,nbytesW;
@@ -60,6 +65,6 @@ int readCAN(can_input_struct *ptr);
 
 int writePosToCAN(double *pos_deg_arr); // write 3 reference joint positions to CAN
 
-int writeTrqToCAN(double *trq_arr); // write 3 reference torques to CAN
+int writeTrqToCAN(double *trq_Nm_arr); // write 3 reference joint torques to CAN
 
 #endif
