@@ -67,7 +67,7 @@
 #define LED_BLUE GPIO_PIN_2
 #define LED_GREEN GPIO_PIN_3
 
-#define POS_CTRL_FREQ 100 // TODO: revert to 1000
+#define POS_CTRL_FREQ 1000 // TODO: revert to 1000
 // #define DT 1/POS_CTRL_FREQ
 #define DT 0.001
 #define MOTOR_ID 1
@@ -82,9 +82,9 @@
 //*****************************************************************************
 typedef enum {CUR_CTRL, POS_CTRL, IDLE} mode; // define data structure containing modes
 volatile mode MODE;
-volatile int16_t CAN_REF = 0;
+volatile int16_t CAN_REF = 1800;
 volatile int16_t CUR_REF = 0;
-volatile int16_t POS_REF = 0;
+volatile int16_t POS_REF = 1800;
 volatile uint8_t STATUS = 0;
 volatile uint32_t pos_deg = 0;
 volatile int32_t pos_err = 0; // position error
@@ -94,11 +94,17 @@ volatile int32_t pos_err_int = 0; // integral of position error
 volatile int32_t pos_err_int_max = 100; // maximum, anti-windup
 volatile int32_t pos_err_int_min = -100; // minimum, anti-windup
 volatile int16_t pos_cur = 0;
-volatile float Kp = 10000;
-volatile float Kd = 100000;
-volatile float Ki = 0;
+volatile float Kp = 2000;   // M1: 2000;    M2: ; M3:
+volatile float Kd = 100000; // M1: 100000;  M2: ; M3:
+volatile float Ki = 0;    // M1: 500;     M2: 100; M3:
 
 int16_t TABLE_CUR_REF[4] = {0,20000,0,-30000};
+
+
+tCANMsgObject sCANMessageR;
+tCANMsgObject sCANMessageT;
+uint8_t pui8MsgDataR[8];
+uint8_t pui8MsgDataT[8];
 
 //*****************************************************************************
 //
@@ -115,6 +121,7 @@ uint32_t g_ui32Flags;
 //
 //*****************************************************************************
 volatile uint32_t g_ui32MsgCount = 0;
+volatile uint32_t g_ui32Msg2Count = 0;
 
 //*****************************************************************************
 //
@@ -164,6 +171,7 @@ void
 MotorControllerIntHandler(void)
 {
     static uint16_t pulse_width = 0;
+    static int16_t angleDeg10 = 0;
     // static int32_t pos_err = 0;
     // static uint32_t pos_deg0 = 0; // TODO: comment this back in later
     // static uint32_t pos_deg1 = 0; // TODO: comment this back in later
@@ -195,25 +203,26 @@ MotorControllerIntHandler(void)
       }
       case POS_CTRL:
       {
-        // POS_REF = CAN_REF/10; // made-up position reference signal
-        POS_REF = 1800;
+        POS_REF = CAN_REF; // made-up position reference signal
+        // POS_REF = 1800;
 
         // calculate error and stuff:
         pos_err = POS_REF - pos_deg;
 
         dpe_dt = (pos_err - pos_err_prev);
-        // pos_err_int = pos_err_int + ((int32_t) (((float) pos_err)/1000));
-        //
-        // // anti-windup:
-        // if (pos_err_int >= pos_err_int_max) { // ceiling
-        //   pos_err_int = pos_err_int_max;
-        // } else if (pos_err_int <= pos_err_int_min) { // floor
-        //   pos_err_int = pos_err_int_min;
-        // }
+
+        pos_err_int = pos_err_int + pos_err;
+
+        // anti-windup:
+        if (pos_err_int >= pos_err_int_max) { // ceiling
+          pos_err_int = pos_err_int_max;
+        } else if (pos_err_int <= pos_err_int_min) { // floor
+          pos_err_int = pos_err_int_min;
+        }
 
         // PID position controller:
         // pos_cur = ((int32_t) Kp*((float) pos_err) + Kd*dpe_dt);
-        pos_cur = ((int16_t) Kp*((float) pos_err))/1000;
+        pos_cur = ((int16_t) Kp*((float) pos_err) + Ki*((float) pos_err_int) + Kd*((float) dpe_dt))/1000;
         // pos_cur = ((int32_t) Kp*pos_err + Ki*pos_err_int + Kd*dpe_dt);
 
         pos_err_prev = pos_err; // set up for next time thru loop
@@ -231,6 +240,13 @@ MotorControllerIntHandler(void)
         break;
       }
     }
+
+    pos_cur = angleDeg10;
+    (*(uint32_t *)pui8MsgDataT) = angleDeg10;
+    CANMessageSet(CAN0_BASE, 2, &sCANMessageT, MSG_OBJ_TYPE_TX);
+
+    angleDeg10++;
+
     HWREGBITW(&g_ui32Flags, 0) ^= 1; // Toggle the flag for the first timer.
     GPIOPinWrite(GPIO_PORTD_BASE, LED_BLUE, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
 }
@@ -292,13 +308,6 @@ CANIntHandler(void)
     ui32Status = CANIntStatus(CAN0_BASE, CAN_INT_STS_CAUSE); // Read the CAN interrupt status to find the cause of the interrupt
     if(ui32Status == CAN_INT_INTID_STATUS) // If the cause is a controller status interrupt, then get the status
     {
-        //
-        // Read the controller status.  This will return a field of status
-        // error bits that can indicate various errors.  Error processing
-        // is not done in this example for simplicity.  Refer to the
-        // API documentation for details about the error status bits.
-        // The act of reading this status will clear the interrupt.
-        //
         ui32Status = CANStatusGet(CAN0_BASE, CAN_STS_CONTROL);
         g_bErrFlag = 1; // Set a flag to indicate some errors may have occurred.
     }
@@ -313,6 +322,27 @@ CANIntHandler(void)
         g_ui32MsgCount++; // increment a counter to track how many messages have been received
         g_bRXFlag1 = 1; //Set flag to indicate received message is pending for this message object.
         g_bErrFlag = 0; // Since a message was received, clear any error flags.
+    }
+    else if(ui32Status == 2)
+    {
+        //
+        // Getting to this point means that the TX interrupt occurred on
+        // message object 2, and the message TX is complete.  Clear the
+        // message object interrupt.
+        //
+        CANIntClear(CAN0_BASE, 2);
+
+        //
+        // Increment a counter to keep track of how many messages have been
+        // sent.  In a real application this could be used to set flags to
+        // indicate when a message is sent.
+        //
+        g_ui32Msg2Count++;
+
+        //
+        // Since the message was sent, clear any error flags.
+        //
+        g_bErrFlag = 0;
     }
     else // Otherwise, something unexpected caused the interrupt.
     {
@@ -337,9 +367,6 @@ main(void)
 #endif
 
     MODE = IDLE;
-
-    tCANMsgObject sCANMessage;
-    uint8_t pui8MsgData[8];
 
     //
     // Enable lazy stacking for interrupt handlers.  This allows floating-point
@@ -374,7 +401,6 @@ main(void)
 
     initRLS();
 
-    // Rx: light up GREEN LED
     SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOD);
     GPIOPinTypeGPIOOutput(GPIO_PORTD_BASE, LED_RED|LED_BLUE|LED_GREEN);
 
@@ -389,7 +415,7 @@ main(void)
     // GPIO port B needs to be enabled so these pins can be used.
     // TODO: change this to whichever GPIO port you are using
     //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB);
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB); // E for custom board, B for Launchpad
 
     //
     // Configure the GPIO pin muxing to select CAN0 functions for these pins.
@@ -398,7 +424,7 @@ main(void)
     // Consult the data sheet to see which functions are allocated per pin.
     // TODO: change this to select the port/pin you are using
     //
-    GPIOPinConfigure(GPIO_PB4_CAN0RX);
+    GPIOPinConfigure(GPIO_PB4_CAN0RX); // E for custom board, B for Tiva
     GPIOPinConfigure(GPIO_PB5_CAN0TX);
 
     //
@@ -441,7 +467,7 @@ main(void)
     defined(TARGET_IS_TM4C129_RA2)
     CANBitRateSet(CAN0_BASE, ui32SysClock, 500000);
 #else
-    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000); // 5 kHz lulz
+    canbitrate_actual = CANBitRateSet(CAN0_BASE, SysCtlClockGet(), 500000);
 #endif
     UARTprintf("CAN bit rate set at %d bps.\n", canbitrate_actual);
 
@@ -469,22 +495,35 @@ main(void)
     CANEnable(CAN0_BASE);
 
 
-    // Initialize a message object to receive CAN messages with ID 0x3001.
+    // Initialize a message object to receive CAN messages with ID 0x7001.
     // The expected ID must be set along with the mask to indicate that all
     // bits in the ID must match.
     //
-    sCANMessage.ui32MsgID = 0x3001; // used for commanded current
-    sCANMessage.ui32MsgIDMask = 0xfffff;
-    sCANMessage.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER |
+    sCANMessageR.ui32MsgID = 0x7001; // used for commanded current
+    sCANMessageR.ui32MsgIDMask = 0xfffff;
+    sCANMessageR.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER |
                              MSG_OBJ_EXTENDED_ID);
-    sCANMessage.ui32MsgLen = 8;
+    sCANMessageR.ui32MsgLen = 8;
 
     //
     // Now load the message object into the CAN peripheral message object 1.
     // Once loaded the CAN will receive any messages with this CAN ID into
     // this message object, and an interrupt will occur.
     //
-    CANMessageSet(CAN0_BASE, 1, &sCANMessage, MSG_OBJ_TYPE_RX);
+    CANMessageSet(CAN0_BASE, 1, &sCANMessageR, MSG_OBJ_TYPE_RX);
+
+    sCANMessageT.ui32MsgID = 0x4001;
+    sCANMessageT.ui32MsgIDMask = 0;
+    sCANMessageT.ui32Flags = (MSG_OBJ_TX_INT_ENABLE | MSG_OBJ_EXTENDED_ID);
+    sCANMessageT.ui32MsgLen = sizeof(pui8MsgDataT);
+    sCANMessageT.pui8MsgData = pui8MsgDataT;
+
+    //
+    // Now load the message object into the CAN peripheral message object 1.
+    // Once loaded the CAN will receive any messages with this CAN ID into
+    // this message object, and an interrupt will occur.
+    //
+    CANMessageSet(CAN0_BASE, 2, &sCANMessageT, MSG_OBJ_TYPE_TX);
 
     TimerBegin();
 
@@ -494,6 +533,7 @@ main(void)
     set_current_mA(0);
 
     UARTprintf("Motor %d node up!\r\nEnable mask is %d\n", MOTOR_ID, MOTOR_EN_MASK);
+    GPIOPinWrite(GPIO_PORTD_BASE, LED_BLUE, LED_BLUE); // Use the flags to Toggle the LED for this timer
 
     //
     // Enter loop to process received messages.  This loop just checks a flag
@@ -524,7 +564,7 @@ main(void)
             // different buffer each time a message is read in order to store
             // different messages in different buffers.
             //
-            sCANMessage.pui8MsgData = pui8MsgData;
+            sCANMessageR.pui8MsgData = pui8MsgDataR;
 
             //
             // Read the message from the CAN.  Message object number 1 is used
@@ -532,7 +572,7 @@ main(void)
             // flag is not set because this interrupt was already cleared in
             // the interrupt handler.
             //
-            CANMessageGet(CAN0_BASE, 1, &sCANMessage, 0);
+            CANMessageGet(CAN0_BASE, 1, &sCANMessageR, 0);
 
             //
             // Clear the pending message flag so that the interrupt handler can
@@ -544,17 +584,18 @@ main(void)
             // Print information about the message just received.
             //
             // PrintCANMessageInfo(&sCANMessage, 1);
-            STATUS = pui8MsgData[0];
+            STATUS = pui8MsgDataR[0];
             if (STATUS & MOTOR_EN_MASK) {
               MODE = STATUS & 0x01;
             } else {
               MODE = IDLE;
             }
 
-            CAN_REF = (((pui8MsgData[2*MOTOR_ID]) << 8) | pui8MsgData[2*MOTOR_ID - 1]);
+            CAN_REF = (((pui8MsgDataR[2*MOTOR_ID]) << 8) | pui8MsgDataR[2*MOTOR_ID - 1]);
         }
-        UARTprintf("MODE: %02X, POS_REF: %d, POS_DEG: %d, POS_ERR: %d, dE/dt: %d, cur_cmd: %d mA\n",\
-          MODE,POS_REF,pos_deg,pos_err,dpe_dt,pos_cur);
+        UARTprintf("g_ui32Msg2Count = %d\n",g_ui32Msg2Count);
+        // UARTprintf("MODE: %02X, POS_REF: %d, POS_DEG: %d, POS_ERR: %d, dE/dt: %d, cur_cmd: %d mA\n",\
+        //   MODE,POS_REF,pos_deg,pos_err,dpe_dt,pos_cur);
     }
 
     //
