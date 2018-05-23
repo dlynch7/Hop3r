@@ -222,8 +222,8 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   * IK for phi-chain:
   ****************************************************************************/
   // Calculate (x,y) location of "hip" joint:
-  float xHphi = 0;
-  float yHphi = 0;
+  // float xHphi = 0;
+  // float yHphi = 0;
 
   // Calculate hip angle:
   float gammaphi = fabs(atan2(yAu,xAu)); //fabs() is absolute value of a float
