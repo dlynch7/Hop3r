@@ -67,3 +67,13 @@ int setup_periodic(void) {
 
   return 0;
 }
+
+void display_sched_attr(int policy, struct sched_param *param)
+{
+   printf("    policy=%s, priority=%d\n",
+           (policy == SCHED_FIFO)  ? "SCHED_FIFO" :
+           (policy == SCHED_RR)    ? "SCHED_RR" :
+           (policy == SCHED_OTHER) ? "SCHED_OTHER" :
+           "???",
+           param->sched_priority);
+}

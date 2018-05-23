@@ -25,4 +25,6 @@ void wait_period(struct periodic_info *info);
 
 int setup_periodic(void);
 
+void display_sched_attr(int policy, struct sched_param *param);
+
 #endif
