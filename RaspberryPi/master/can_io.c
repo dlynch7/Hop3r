@@ -21,6 +21,10 @@ int initSocketCAN(void) { // set up CAN raw socket
   printf("\tioctl complete\n");
   addr.can_ifindex = ifr.ifr_ifindex;
 
+  // // set up timeout for blocking read
+  // tv.tv_sec = 0;
+  // tv.tv_usec = 10;
+  // setsockopt(s, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
   if (bind(s, (struct sockaddr *)&addr, sizeof(addr)) < 0) {
   	perror("\tbind");
@@ -35,7 +39,7 @@ int initSocketCAN(void) { // set up CAN raw socket
   printf("CAN socket set up complete!\n");
 
   /* parse bogus CAN frame */
-  if (parse_canframe("00004001#0000000000000000", &writeFrame)){
+  if (parse_canframe("00007001#0000000000000000", &writeFrame)){
   	fprintf(stderr, "\nWrong CAN-frame format!\n\n");
   	fprintf(stderr, "Try: <can_id>#{R|data}\n");
   	fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
@@ -53,21 +57,25 @@ int initSocketCAN(void) { // set up CAN raw socket
 
 // get data from CAN, parse it, and put it into a struct of type can_input_struct:
 int readCAN(can_input_struct *ptr) {
-  nbytesR = read(s, &readFrame, sizeof(readFrame));
-  printf("Read %d bytes:\n", nbytesR);
-  printf("\tframe.can_id  = %X\n",readFrame.can_id);
-  printf("\tmasked ID  = %X\n",readFrame.can_id & 0x0FFFFFFF);
+  int ID;
 
+  nbytesR = read(s, &readFrame, sizeof(readFrame));
+
+  pthread_mutex_lock(&mutex1);
   switch (readFrame.can_id & 0x0FFFFFFF) {
     // if the received CAN frame ID indicates a joint position:
     case MOTOR_1_POS_CAN_ID:
     {
+      ID = 1;
       ptr->qa_act[0] = ((readFrame.data[1] << 8) | readFrame.data[0]);
+      // printf("qa_act[0] = %X\n",ptr->qa_act[0]); // TODO: delete this line after testing
       break;
     }
     case MOTOR_2_POS_CAN_ID:
     {
+      ID = 2;
       ptr->qa_act[1] = ((readFrame.data[1] << 8) | readFrame.data[0]);
+      // printf("qa_act[1] = %X\n",ptr->qa_act[1]); // TODO: delete this line after testing
       break;
     }
     case MOTOR_3_POS_CAN_ID:
@@ -117,9 +125,10 @@ int readCAN(can_input_struct *ptr) {
     }
     default: // CAN frame does not match any known IDs
       fprintf(stderr,"The received CAN frame does not match any known IDs.\n");
-      return 1;
+      // return 1;
   }
-  return 0;
+  pthread_mutex_unlock(&mutex1);
+  return ID;
 }
 
 // write 3 reference joint positions to CAN:
@@ -130,9 +139,9 @@ int writePosToCAN(double *pos_deg_arr) {
   // The motor controllers expect reference positions in 1/10ths of a degree,
   // represented as int16_t's, so we must multiply the elements in pos_deg_arr
   // by 10, and then cast to int16_t:
-  qa_deg10[0] = ((int) (10*pos_deg_arr[0]));
-  qa_deg10[1] = ((int) (10*pos_deg_arr[1]));
-  qa_deg10[2] = ((int) (10*pos_deg_arr[2]));
+  qa_deg10[0] = ((int) 2700 + (10*pos_deg_arr[0]));
+  qa_deg10[1] = ((int) 2700 + (10*pos_deg_arr[1]));
+  qa_deg10[2] = ((int) 2700 + (10*pos_deg_arr[2]));
 
   writeFrame.can_id = MOTOR_CMD_ID;
   // set mode to position control and enable motors:

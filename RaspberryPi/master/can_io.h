@@ -3,12 +3,14 @@
 // Header file for can_io.c
 // implements a CAN bus interface built on SocketCAN.
 
+#include <errno.h>          /* Error number definitions */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
 #include <net/if.h>
+#include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -31,9 +33,9 @@
 // CAN IDs:
 // TODO: make sure ID makes sense with message frequency
 #define MOTOR_CMD_ID 0x00007001 // TODO: finalize ID: 0
-#define MOTOR_1_POS_CAN_ID 0x00006001 // TODO: finalize ID: 2
-#define MOTOR_2_POS_CAN_ID 3 // TODO: finalize ID: 3
-#define MOTOR_3_POS_CAN_ID 4 // TODO: finalize ID: 4
+#define MOTOR_1_POS_CAN_ID 0x00002001 // TODO: finalize ID: 2
+#define MOTOR_2_POS_CAN_ID 0x00003001 // TODO: finalize ID: 3
+#define MOTOR_3_POS_CAN_ID 0x00004001 // TODO: finalize ID: 4
 #define MOTOR_1_CUR_CAN_ID 5 // TODO: finalize ID: 5
 #define MOTOR_2_CUR_CAN_ID 6 // TODO: finalize ID: 6
 #define MOTOR_3_CUR_CAN_ID 7 // TODO: finalize ID: 7
@@ -48,6 +50,7 @@ struct sockaddr_can addr;
 struct can_frame writeFrame;
 struct can_frame readFrame;
 struct ifreq ifr;
+struct timeval tv; // used for read timeout
 
 typedef struct {
   int16_t qa_act[3];  // (actual) actuated joint angles
