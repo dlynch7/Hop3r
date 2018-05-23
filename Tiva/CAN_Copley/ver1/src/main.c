@@ -70,7 +70,7 @@
 #define POS_CTRL_FREQ 1000 // TODO: revert to 1000
 // #define DT 1/POS_CTRL_FREQ
 #define DT 0.001
-#define MOTOR_ID 1
+#define MOTOR_ID 2
 #define MOTOR_EN_MASK (1 << (2*MOTOR_ID - 1))
 
 #define PI 3.14159
@@ -171,7 +171,7 @@ void
 MotorControllerIntHandler(void)
 {
     static uint16_t pulse_width = 0;
-    static int16_t angleDeg10 = 0;
+    // static int16_t angleDeg10 = -965;
     // static int32_t pos_err = 0;
     // static uint32_t pos_deg0 = 0; // TODO: comment this back in later
     // static uint32_t pos_deg1 = 0; // TODO: comment this back in later
@@ -241,11 +241,11 @@ MotorControllerIntHandler(void)
       }
     }
 
-    pos_cur = angleDeg10;
-    (*(uint32_t *)pui8MsgDataT) = angleDeg10;
+    // pos_cur = angleDeg10;
+    (*(uint32_t *)pui8MsgDataT) = pos_deg;
     CANMessageSet(CAN0_BASE, 2, &sCANMessageT, MSG_OBJ_TYPE_TX);
 
-    angleDeg10++;
+    // angleDeg10++;
 
     HWREGBITW(&g_ui32Flags, 0) ^= 1; // Toggle the flag for the first timer.
     GPIOPinWrite(GPIO_PORTD_BASE, LED_BLUE, g_ui32Flags << 1); // Use the flags to Toggle the LED for this timer
@@ -415,7 +415,7 @@ main(void)
     // GPIO port B needs to be enabled so these pins can be used.
     // TODO: change this to whichever GPIO port you are using
     //
-    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOB); // E for custom board, B for Launchpad
+    SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOE); // E for custom board, B for Launchpad
 
     //
     // Configure the GPIO pin muxing to select CAN0 functions for these pins.
@@ -424,8 +424,8 @@ main(void)
     // Consult the data sheet to see which functions are allocated per pin.
     // TODO: change this to select the port/pin you are using
     //
-    GPIOPinConfigure(GPIO_PB4_CAN0RX); // E for custom board, B for Tiva
-    GPIOPinConfigure(GPIO_PB5_CAN0TX);
+    GPIOPinConfigure(GPIO_PE4_CAN0RX); // E for custom board, B for Tiva
+    GPIOPinConfigure(GPIO_PE5_CAN0TX);
 
     //
     // Enable the alternate function on the GPIO pins.  The above step selects
@@ -433,7 +433,7 @@ main(void)
     // alternate function instead of GPIO for these pins.
     // TODO: change this to match the port/pin you are using
     //
-    GPIOPinTypeCAN(GPIO_PORTB_BASE, GPIO_PIN_4 | GPIO_PIN_5);
+    GPIOPinTypeCAN(GPIO_PORTE_BASE, GPIO_PIN_4 | GPIO_PIN_5);
 
     //
     // The GPIO port and pins have been set up for CAN.  The CAN peripheral
@@ -499,10 +499,11 @@ main(void)
     // The expected ID must be set along with the mask to indicate that all
     // bits in the ID must match.
     //
-    sCANMessageR.ui32MsgID = 0x7001; // used for commanded current
+    sCANMessageR.ui32MsgID = 0x001; // used for commanded current
     sCANMessageR.ui32MsgIDMask = 0xfffff;
-    sCANMessageR.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER |
-                             MSG_OBJ_EXTENDED_ID);
+    // sCANMessageR.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER |
+    //                          MSG_OBJ_EXTENDED_ID);
+    sCANMessageR.ui32Flags = (MSG_OBJ_RX_INT_ENABLE | MSG_OBJ_USE_ID_FILTER);
     sCANMessageR.ui32MsgLen = 8;
 
     //
@@ -512,7 +513,7 @@ main(void)
     //
     CANMessageSet(CAN0_BASE, 1, &sCANMessageR, MSG_OBJ_TYPE_RX);
 
-    sCANMessageT.ui32MsgID = 0x4001;
+    sCANMessageT.ui32MsgID = 0x3001;
     sCANMessageT.ui32MsgIDMask = 0;
     sCANMessageT.ui32Flags = (MSG_OBJ_TX_INT_ENABLE | MSG_OBJ_EXTENDED_ID);
     sCANMessageT.ui32MsgLen = sizeof(pui8MsgDataT);
@@ -593,9 +594,9 @@ main(void)
 
             CAN_REF = (((pui8MsgDataR[2*MOTOR_ID]) << 8) | pui8MsgDataR[2*MOTOR_ID - 1]);
         }
-        UARTprintf("g_ui32Msg2Count = %d\n",g_ui32Msg2Count);
-        // UARTprintf("MODE: %02X, POS_REF: %d, POS_DEG: %d, POS_ERR: %d, dE/dt: %d, cur_cmd: %d mA\n",\
-        //   MODE,POS_REF,pos_deg,pos_err,dpe_dt,pos_cur);
+        // UARTprintf("g_ui32Msg2Count = %d\n",g_ui32Msg2Count);
+        UARTprintf("MODE: %02X, POS_REF: %d, POS_DEG: %d, POS_ERR: %d, dE/dt: %d, cur_cmd: %d mA\n",\
+          MODE,POS_REF,pos_deg,pos_err,dpe_dt,pos_cur);
     }
 
     //
