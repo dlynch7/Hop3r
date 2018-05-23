@@ -83,6 +83,7 @@
 #include "serial_interface.h"
 
 #define CONTROL_PERIOD_US 2000
+#define CAN_READ_PERIOD_US 1
 #define UART_PERIOD_US 2000
 
 #define INBUFLENGTH (sizeof(inbuf)/sizeof(inbuf[0]))
@@ -114,6 +115,10 @@ int main(void) {
   int runPermission = 0;
   int startwait;
 
+  int asdf,policy;
+  struct sched_param param;
+  pthread_attr_t attr;
+
   CAN_read_thread_begin = 0; // reads from CAN bus cannot commence
   UART_thread_begin = 0; // reading and writing over UART cannot commence
   Control_thread_begin = 0; // control computations and writes to CAN cannot commence
@@ -124,53 +129,47 @@ int main(void) {
   }
   printf("Initialized SocketCAN interface.\n");
 
-  readCAN(&dataFromCAN);
-  double trqArr[3] = {0.0, 1.0, -2.0};
-  writePosToCAN(trqArr);
-
   printf("Buffer read index: %d\n",get_read_index());
   printf("Buffer write index: %d\n",get_write_index());
 
   printf("This is the main function.\n");
 
-  return 0;
-
   /////////////////////////////////////////////
   // POSIX serial interface:
   //
-  // open the serial port:
-  serial_port = open_port();
-  printf("serial_port = %d\n",serial_port);
-
-  config_port(serial_port);
-  dprintf(serial_port,"%d\n",BUFLEN);
-
-  read(serial_port, inbuf,INBUFLENGTH);
-  sscanf(inbuf,"%d\n",&runPermission);
-  printf("runPermission = %d\n",runPermission);
-  if (runPermission != 1) {
-    printf("Client denied permission to run.\n");
-    return 1;
-  }
-
-  // receive current profile from client PC:
-  for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
-    read(serial_port, inbuf,INBUFLENGTH);
-    sscanf(inbuf,"%f %f %f\n",&qaTraj[readTrajCount][0],&qaTraj[readTrajCount][1],&qaTraj[readTrajCount][2]);
-    printf("%d: %5.3f\t%5.3f\t%5.3f\n",readTrajCount,qaTraj[readTrajCount][0],qaTraj[readTrajCount][1],qaTraj[readTrajCount][2]);
-    // sscanf(inbuf,"%d\n",&refTraj[readTrajCount]);
-    // printf("%d %d\n",readTrajCount,refTraj[readTrajCount]);
-  }
-
-  printf("Done receiving\n");
-  // ask client PC for permission to write
-  read(serial_port, inbuf,INBUFLENGTH);
-  sscanf(inbuf,"%d\n",&writePermission);
-  printf("writePermission = %d\n",writePermission);
-  if (writePermission != 1) {
-    printf("Client denied permission to write.\n");
-    return 1;
-  }
+  // open the serial port: COMMENT IN AFTER HERE
+  // serial_port = open_port();
+  // printf("serial_port = %d\n",serial_port);
+  //
+  // config_port(serial_port);
+  // dprintf(serial_port,"%d\n",BUFLEN);
+  //
+  // read(serial_port, inbuf,INBUFLENGTH);
+  // sscanf(inbuf,"%d\n",&runPermission);
+  // printf("runPermission = %d\n",runPermission);
+  // if (runPermission != 1) {
+  //   printf("Client denied permission to run.\n");
+  //   return 1;
+  // }
+  //
+  // // receive current profile from client PC:
+  // for (readTrajCount = 0; readTrajCount < BUFLEN; readTrajCount++) {
+  //   read(serial_port, inbuf,INBUFLENGTH);
+  //   sscanf(inbuf,"%f %f %f\n",&qaTraj[readTrajCount][0],&qaTraj[readTrajCount][1],&qaTraj[readTrajCount][2]);
+  //   printf("%d: %5.3f\t%5.3f\t%5.3f\n",readTrajCount,qaTraj[readTrajCount][0],qaTraj[readTrajCount][1],qaTraj[readTrajCount][2]);
+  //   // sscanf(inbuf,"%d\n",&refTraj[readTrajCount]);
+  //   // printf("%d %d\n",readTrajCount,refTraj[readTrajCount]);
+  // }
+  //
+  // printf("Done receiving\n");
+  // // ask client PC for permission to write
+  // read(serial_port, inbuf,INBUFLENGTH);
+  // sscanf(inbuf,"%d\n",&writePermission);
+  // printf("writePermission = %d\n",writePermission);
+  // if (writePermission != 1) {
+  //   printf("Client denied permission to write.\n");
+  //   return 1;
+  // } // COMMENT IN ABOVE HERE
   //////////////////////////////////////////////////////////////////////////////
 
   printf("Status of data_buf: read = %d, write = %d, empty = %d, full = %d\n",\
@@ -187,13 +186,34 @@ int main(void) {
     return 1;
   }
 
-  if ( (rc1=pthread_create(&thread1,NULL,&Control_thread,NULL)) ) {
+  asdf = pthread_attr_getschedparam(&attr, &param);
+  if (asdf != 0) {
+    fprintf(stderr,"failed to get sched params\n");
+  }
+  asdf = pthread_attr_getschedpolicy(&attr, &policy);
+  if (asdf != 0) {
+    fprintf(stderr,"failed to get sched policy\n");
+  }
+  display_sched_attr(policy,&param);
+
+  // struct sched_param thread1_param;
+  // thread1_param.sched_priority = 10;
+  // struct sched_param thread2_param;
+  // thread2_param.sched_priority = 11;
+  // struct sched_param thread3_param;
+  // thread3_param.sched_priority = 12;
+  //
+  // pthread_setschedparam(thread1, SCHED_FIFO, &thread1_param);
+  // pthread_setschedparam(thread2, SCHED_FIFO, &thread2_param);
+  // pthread_setschedparam(thread3, SCHED_FIFO, &thread3_param);
+
+  if ( (rc1=pthread_create(&thread1,NULL,&CAN_read_thread,NULL)) ) {
 		fprintf(stderr,"Thread creation failed: %d\n", rc1);
 	}
-	if ( (rc2=pthread_create(&thread2,NULL,&UART_thread,NULL)) ) {
-		fprintf(stderr,"Thread creation failed: %d\n", rc2);
-	}
-  if ( (rc3=pthread_create(&thread3,NULL,&CAN_read_thread,NULL)) ) {
+	// if ( (rc2=pthread_create(&thread2,NULL,&UART_thread,NULL)) ) {
+	// 	fprintf(stderr,"Thread creation failed: %d\n", rc2);
+	// }
+  if ( (rc3=pthread_create(&thread3,NULL,&Control_thread,NULL)) ) {
     fprintf(stderr,"Thread creation failed: %d\n", rc3);
   }
 
@@ -207,7 +227,7 @@ int main(void) {
   /****************************************************************************
   * Main loop
   ****************************************************************************/
-  printf("Running...");
+  printf("Running...\n");
 
   /****************************************************************************
   *	Wait until threads are complete before main continues. Unless we
@@ -215,7 +235,7 @@ int main(void) {
   *	the process and all threads before the threads have completed.
   ****************************************************************************/
   pthread_join(thread1,NULL); // wait for Control_thread to complete
-  pthread_join(thread2,NULL); // wait for UART_thread to complete
+  // pthread_join(thread2,NULL); // wait for UART_thread to complete
   pthread_join(thread3,NULL); // wait for CAN_read_thread to complete
 
   close(s); // close the CAN socket
@@ -231,20 +251,28 @@ int main(void) {
 }
 
 void *CAN_read_thread() { // non-periodic thread
-  while(!CAN_read_thread_begin) {;} // wait
-  while (CAN_read_thread_begin) {
-    // pthread_mutex_lock(&mutex1);
+  uint8_t read_count;
+  struct periodic_info info;
 
-    nbytesR = read(s, &readFrame, sizeof(readFrame));
-    printf("Read %d bytes:\n", nbytesR);
-    printf("\tframe.can_id  = %X\n",readFrame.can_id);
-    // pthread_mutex_unlock(&mutex1);
+  double trqArr[3] = {0.0, 1.0, -2.0};
+  int ID[10];
+  char results[2][10];
+  while(!CAN_read_thread_begin) {;} // wait
+  make_periodic(CAN_READ_PERIOD_US, &info); // period (first argument) in microseconds
+  // while (CAN_read_thread_begin) {
+  while (read_count < 10) {
+    readCAN(&dataFromCAN);
+    read_count++;
+    wait_period(&info);
   }
+
   return NULL;
 }
 
 void *Control_thread() { // periodic thread
   uint16_t k;
+  double trqArr[3] = {0.0, 1.0, -2.0};
+  double posArr[3] = {-140.8,-35.15,-144.8};
 
   // int s; // can raw socket
   // int nbytes;
@@ -255,15 +283,15 @@ void *Control_thread() { // periodic thread
 
   struct periodic_info info;
 
-  // float qa[3] = {-1.6845,-2.6214,-1.4571}; // in degrees: -96.5, -150.2, -83.5
-  // -152.2, -170.2, -27.7 (deg) or -2.6564, -2.9706, -0.4835 (rad)
-  // float qu[6];
-  // float footPose[3] = {};
-  // double wrench[3] = {1,1,1};
-  // double twist[3] = {1,1,1};
-  // double torques[3];
-  // uint8_t didw2tSucceed = 0;
-  uint16_t qaTrajk0,qaTrajk1,qaTrajk2;
+  float qa[3] = {-1.6845,-2.6214,-1.4571}; // in degrees: -96.5, -150.2, -83.5
+  // // -152.2, -170.2, -27.7 (deg) or -2.6564, -2.9706, -0.4835 (rad)
+  float qu[6];
+  float footPose[3] = {};
+  double wrench[3] = {0,-70,0};
+  // // double twist[3] = {1,1,1};
+  double torques[3];
+  uint8_t didw2tSucceed = 0;
+  // uint16_t qaTrajk0,qaTrajk1,qaTrajk2;
 
   /****************************************************************************
   * Wait for permission to begin,
@@ -272,53 +300,44 @@ void *Control_thread() { // periodic thread
 
   while(!Control_thread_begin) {;}
   make_periodic(CONTROL_PERIOD_US, &info); // period (first argument) in microseconds
-  for (k = 0; k < BUFLEN;) {
-    // read from the CAN bus:
-    // pthread_mutex_lock(&mutex1);
-
-    // nbytes = read(s, &readFrame, sizeof(readFrame));
-		// printf("Read %d bytes:\n", nbytes);
-		// printf("\tframe.can_id  = %X\n",readFrame.can_id);
+  for (k = 0; k < 10;) {
+    // get shared data:
+    // qa[0] = dataFromCAN.qa_act[0]
+    qa[0] = (double) 0.000555556*PI*(dataFromCAN.qa_act[0] - 2700);
+    qa[1] = (double) 0.000555556*PI*(dataFromCAN.qa_act[1] - 2700);
+    qa[2] = (double) 0.000555556*PI*(dataFromCAN.qa_act[2] - 2700);
+    printf("%d\t%d\t%d\n",dataFromCAN.qa_act[0],dataFromCAN.qa_act[1],dataFromCAN.qa_act[2]);
+    // printf("dataFromCAN.qa_act[0] = %d\n",dataFromCAN.qa_act[0]);
+    // printf("dataFromCAN.qa_act[1] = %d\n",dataFromCAN.qa_act[1]);
+    // printf("dataFromCAN.qa_act[2] = %d\n",dataFromCAN.qa_act[2]);
+    printf("qa = %f,\t%f,\t%f\n",qa[0],qa[1],qa[2]);
 
     // // temporary kinematics testing location:
     //
-    // clock_t tic2 = clock();
+    clock_t tic2 = clock();
     // // qa = qaTraj[k];
-    // geomFK(qaTraj[k],qu,footPose,1);
-    // subchainIK(qaTraj[k],qu,footPose);
-    // didw2tSucceed = wrench2torques(qa, qu, torques, wrench);
-    // clock_t toc2 = clock();
+    // // geomFK(qaTraj[k],qu,footPose,1);
+    geomFK(qa,qu,footPose,1);
+    subchainIK(qaTraj[k],qu,footPose);
+    didw2tSucceed = wrench2torques(qa, qu, torques, wrench);
+    clock_t toc2 = clock();
     //
-    // // printf("Did w2t succeed? Yes (0) / No(1): %d\n",didw2tSucceed);
-    // // printf("Calculating took %f seconds\n", (double)(toc2 - tic2) / CLOCKS_PER_SEC);
-    // // printf("torques = [%6.3f, %6.3f, %6.3f]\n",torques[0],torques[1],torques[2]);
+    // printf("Did w2t succeed? Yes (0) / No(1): %d\n",didw2tSucceed);
+    printf("Calculating took %f seconds\n", (double)(toc2 - tic2) / CLOCKS_PER_SEC);
+    printf("torques = [%6.3f, %6.3f, %6.3f]\n",torques[0],torques[1],torques[2]);
     // pthread_mutex_unlock(&mutex1);
-    qaTrajk0 = ((int16_t) 2700 + qaTraj[k][0]);
-    qaTrajk1 = ((int16_t) 2700 + qaTraj[k][1]);
-    qaTrajk2 = ((int16_t) 2700 + qaTraj[k][2]);
+    // qaTrajk0 = ((int16_t) 2700 + qaTraj[k][0]);
+    // qaTrajk1 = ((int16_t) 2700 + qaTraj[k][1]);
+    // qaTrajk2 = ((int16_t) 2700 + qaTraj[k][2]);
 
     // write to the CAN bus:
-    writeFrame.can_id = 0x00004001;
-    writeFrame.data[0] = 0b00101011;
-    writeFrame.data[1] = (qaTrajk0 & 0x00FF);
-    writeFrame.data[2] = (qaTrajk0 & 0xFF00) >> 8;
-    writeFrame.data[3] = (qaTrajk1 & 0x00FF);
-    writeFrame.data[4] = (qaTrajk1 & 0xFF00) >> 8;
-    writeFrame.data[5] = (qaTrajk2 & 0x00FF);
-    writeFrame.data[6] = (qaTrajk2 & 0xFF00) >> 8;
-    pthread_mutex_lock(&mutex1);
-  	if ((nbytesW = write(s, &writeFrame, sizeof(writeFrame))) != sizeof(writeFrame)) {
-  		perror("write");
-  	}
-    /* get interface name of the received CAN frame */
-    ifr.ifr_ifindex = addr.can_ifindex;
-    ioctl(s, SIOCGIFNAME, &ifr);
-    pthread_mutex_unlock(&mutex1);
+    writePosToCAN(posArr);
+
     // put stuff in the circular buffer:
-    pthread_mutex_lock(&mutex1);
-    printf("CAN thread: %5.3f %5.3f %5.3f\n",qaTraj[k][0],qaTraj[k][1],qaTraj[k][2]);
-    buffer_write(qaTraj[k][0],qaTraj[k][1],qaTraj[k][2]);
-    pthread_mutex_unlock(&mutex1);
+    // pthread_mutex_lock(&mutex1);
+    // printf("CAN thread: %5.3f %5.3f %5.3f\n",qaTraj[k][0],qaTraj[k][1],qaTraj[k][2]);
+    // buffer_write(qaTraj[k][0],qaTraj[k][1],qaTraj[k][2]);
+    // pthread_mutex_unlock(&mutex1);
     ++k;
     wait_period(&info);
   }
