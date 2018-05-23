@@ -205,16 +205,16 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   float theta1 = -gammatheta - alphatheta;
 
   // (x,y) location of "knee" joint
-  float xKtheta = xHtheta + L1*cos(theta1);
-  float yKtheta = yHtheta + L1*sin(theta1);
+  // float xKtheta = xHtheta + L1*cos(theta1);
+  // float yKtheta = yHtheta + L1*sin(theta1);
 
   // calculate knee angle
   float betatheta = acos((L1*L1 + L2*L2 - xAptheta*xAptheta - yAptheta*yAptheta)/(2*L1*L2));
   float theta2 = PI - betatheta;
 
   // (x,y,angle) of "lower ankle" joint using FK
-  float xAtheta = xKtheta + L2*cos(theta1 + theta2);
-  float yAtheta = yKtheta + L2*sin(theta1 + theta2);
+  // float xAtheta = xKtheta + L2*cos(theta1 + theta2);
+  // float yAtheta = yKtheta + L2*sin(theta1 + theta2);
   float theta3 = angF - theta1 - theta2 - 2*PI;
 
   // printf("th1 = %f\tth2 = %f\tth3 = %f\n",theta1,theta2,theta3);
@@ -222,8 +222,8 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   * IK for phi-chain:
   ****************************************************************************/
   // Calculate (x,y) location of "hip" joint:
-  float xHphi = 0;
-  float yHphi = 0;
+  // float xHphi = 0;
+  // float yHphi = 0;
 
   // Calculate hip angle:
   float gammaphi = fabs(atan2(yAu,xAu)); //fabs() is absolute value of a float
@@ -231,20 +231,20 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   float phi1 = -gammaphi - alphaphi;
 
   // Calculate (x,y) location of "knee" joint:
-  float xKphi = xHphi + L3*cos(phi1);
-  float yKphi = yHphi + L3*sin(phi1);
+  // float xKphi = xHphi + L3*cos(phi1);
+  // float yKphi = yHphi + L3*sin(phi1);
 
   // Calculate knee angle:
   float betaphi = acos((L3*L3 + L4*L4 - xAu*xAu - yAu*yAu)/(2*L3*L4));
   float phi2 = PI - betaphi;
 
   // Calculate (x,y,angle) of "upper ankle" joint, using FK:
-  float xAuphi = xKphi + L4*cos(phi1 + phi2);
-  float yAuphi = yKphi + L4*sin(phi1 + phi2);
+  // float xAuphi = xKphi + L4*cos(phi1 + phi2);
+  // float yAuphi = yKphi + L4*sin(phi1 + phi2);
   float phi3 = angF - phi1 - phi2 - 2*PI;
 
   // printf("ph1 = %f\tph2 = %f\tph3 = %f\n",phi1,phi2,phi3);
-  
+
 
   /****************************************************************************
   * IK for psi-chain:
@@ -261,16 +261,16 @@ int8_t subchainIK(float *qa, float *qu, float *footPose) {
   float psi1 = -PI + gammapsi + alphapsi;
 
   // Calculate (x,y) location of "knee" joint:
-  float xKpsi = xHpsi + L5*cos(psi1);
-  float yKpsi = yHpsi + L5*sin(psi1);
+  // float xKpsi = xHpsi + L5*cos(psi1);
+  // float yKpsi = yHpsi + L5*sin(psi1);
 
   // Calculate knee angle:
   float betapsi = acos((L5*L5 + L6*L6 - xAppsi*xAppsi - yAppsi*yAppsi)/(2*L5*L6));
   float psi2 = -PI + betapsi;
 
   // Calculate (x,y,angle) of "lower ankle" joint, using FK:
-  float xApsi = xKpsi + L6*cos(psi1 + psi2);
-  float yApsi = yKpsi + L6*sin(psi1 + psi2);
+  // float xApsi = xKpsi + L6*cos(psi1 + psi2);
+  // float yApsi = yKpsi + L6*sin(psi1 + psi2);
   float psi3 = angF - psi1 - psi2 - 2*PI;
 
   // printf("ps1 = %f\tps2 = %f\tps3 = %f\n",psi1,psi2,psi3);
@@ -570,4 +570,40 @@ int8_t wrench2torques(float *qa, float *qu, double *torques, double *wrench) {
     wrench, 1, 0.0, torques, 1);
 
   return 0;
+}
+
+// interpolation:
+//    generates an interpolated array of specified length from an initial tuple
+//    to a final tuple. Interpolation types are linear, cubic, and trapezoidal
+// things that I might want to interpolate: foot pose (3-tuple), qa (3-tuple)
+// inputs: initial tuple, final tuple, number of points, interpolation type,
+//    pointer to output array
+// interpolation types: linear, cubic spline, trapezoidal profile
+uint8_t gen_tuple_list(uint8_t tuple_len, float *init_tuple, float *final_tuple, \
+  uint16_t npoints, uint8_t interp_type, float out_arr[][3]) {
+
+
+  switch (interp_type) {
+    case 0: // linear interpolation
+    {
+      printf("interp_type = %d.\n",interp_type);
+      break;
+    }
+    case 1: // cubic spline
+    {
+      printf("interp_type = %d.\n",interp_type);
+      break;
+    }
+    case 2: // trapezoidal profile
+    {
+      printf("interp_type = %d.\n",interp_type);
+      break;
+    }
+    default:
+      {
+        printf("interp_type = %d is wrong. Enter 0 (linear), 1 (cspline), or 2 (trap)\n",interp_type);
+        return 0;
+      }
+  }
+  return 1;
 }

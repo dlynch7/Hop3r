@@ -46,5 +46,8 @@ int8_t subchainJacobian(double *Js, float *qa, float *qu, uint8_t chainOption);
 int8_t twist2vels(float *qa, float *qu, double *dqa_dt, double *twist);
 int8_t wrench2torques(float *qa, float *qu, double *torques, double *wrench);
 
+// interpolation:
+uint8_t gen_tuple_list(uint8_t tuple_len,float *init_tuple,float *final_tuple,\
+  uint16_t npoints, uint8_t interp_type, float out_arr[][3]);
 
 #endif

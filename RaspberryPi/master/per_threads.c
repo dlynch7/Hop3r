@@ -52,6 +52,8 @@ int setup_periodic(void) {
   sigset_t alarm_sig;
 	int i;
 
+	pthread_mutex_init(&mutex1, NULL);
+
 	printf("Periodic threads using POSIX timers\n");
 
 	/* Block all real time signals so they can be used for the timers.
@@ -64,4 +66,14 @@ int setup_periodic(void) {
 	sigprocmask(SIG_BLOCK, &alarm_sig, NULL);
 
   return 0;
+}
+
+void display_sched_attr(int policy, struct sched_param *param)
+{
+   printf("    policy=%s, priority=%d\n",
+           (policy == SCHED_FIFO)  ? "SCHED_FIFO" :
+           (policy == SCHED_RR)    ? "SCHED_RR" :
+           (policy == SCHED_OTHER) ? "SCHED_OTHER" :
+           "???",
+           param->sched_priority);
 }

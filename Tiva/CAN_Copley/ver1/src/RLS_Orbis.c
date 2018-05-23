@@ -29,10 +29,10 @@ void initRLS(void) {
 
   SysCtlPeripheralEnable(SYSCTL_PERIPH_GPIOA);
 
-  GPIOPinConfigure(GPIO_PA2_SSI0CLK);
-  GPIOPinConfigure(GPIO_PA3_SSI0FSS);
-  GPIOPinConfigure(GPIO_PA4_SSI0RX);
-  GPIOPinConfigure(GPIO_PA5_SSI0TX);
+  GPIOPinConfigure(GPIO_PA2_SSI0CLK); // white
+  GPIOPinConfigure(GPIO_PA3_SSI0FSS); // blue
+  GPIOPinConfigure(GPIO_PA4_SSI0RX);  // green
+  GPIOPinConfigure(GPIO_PA5_SSI0TX);  // yellow
 
   GPIOPinTypeSSI(GPIO_PORTA_BASE, GPIO_PIN_5 | GPIO_PIN_4 | GPIO_PIN_3 | GPIO_PIN_2);
 
@@ -40,10 +40,10 @@ void initRLS(void) {
     defined(TARGET_IS_TM4C129_RA1) ||                                         \
     defined(TARGET_IS_TM4C129_RA2)
     SSIConfigSetExpClk(SSI0_BASE, ui32SysClock, SSI_FRF_MOTO_MODE_0,
-                       SSI_MODE_MASTER, 1000000, 8); // 8-bit mode
+                       SSI_MODE_MASTER, 100000, 8); // 8-bit mode
   #else
     SSIConfigSetExpClk(SSI0_BASE, SysCtlClockGet(), SSI_FRF_MOTO_MODE_0,
-                       SSI_MODE_MASTER, 1000000, 8); // 8-bit mode
+                       SSI_MODE_MASTER, 100000, 8); // 8-bit mode
   #endif
 
   // Enable the SSI0 module.
