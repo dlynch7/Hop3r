@@ -39,7 +39,7 @@ int initSocketCAN(void) { // set up CAN raw socket
   printf("CAN socket set up complete!\n");
 
   /* parse bogus CAN frame */
-  if (parse_canframe("00007001#0000000000000000", &writeFrame)){
+  if (parse_canframe("00000001#0000000000000000", &writeFrame)){
   	fprintf(stderr, "\nWrong CAN-frame format!\n\n");
   	fprintf(stderr, "Try: <can_id>#{R|data}\n");
   	fprintf(stderr, "can_id can have 3 (SFF) or 8 (EFF) hex chars\n");
