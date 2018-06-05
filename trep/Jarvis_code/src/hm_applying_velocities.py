@@ -127,7 +127,7 @@ def generate_cont_sim(system, q0):
         q = x.tolist()[:n]
         dq = x.tolist()[n:]
         system.set_state(q=q, dq=dq, ddqk=qk_dd_func(system, t), t=t)
-        system.f()  
+        system.f()
         ddq = system.ddq
         return np.concatenate((dq, ddq))
 

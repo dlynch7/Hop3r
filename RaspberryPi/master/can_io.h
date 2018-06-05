@@ -32,7 +32,7 @@
 
 // CAN IDs:
 // TODO: make sure ID makes sense with message frequency
-#define MOTOR_CMD_ID 0x00007001 // TODO: finalize ID: 0
+#define MOTOR_CMD_ID 0x00000001 // TODO: finalize ID: 0
 #define MOTOR_1_POS_CAN_ID 0x00002001 // TODO: finalize ID: 2
 #define MOTOR_2_POS_CAN_ID 0x00003001 // TODO: finalize ID: 3
 #define MOTOR_3_POS_CAN_ID 0x00004001 // TODO: finalize ID: 4
@@ -69,5 +69,7 @@ int readCAN(can_input_struct *ptr);
 int writePosToCAN(double *pos_deg_arr); // write 3 reference joint positions to CAN
 
 int writeTrqToCAN(double *trq_Nm_arr); // write 3 reference joint torques to CAN
+
+int killMotors(void);
 
 #endif
