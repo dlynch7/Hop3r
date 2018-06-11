@@ -115,3 +115,22 @@ legend('winding temp','housing temp','plate temp','Location','Best')
 xlabel('time (s)')
 ylabel('Temperature (deg C)')
 hold off 
+
+%% Check observability
+A = [-1/(mw*cw*Rtwh), 1/(mw*cw*Rtwh), 0; 
+                1/(mh*ch*Rtwh), -1/(mh*ch*Rtwh) - 1/(mh*ch*Rtha), 1/(mh*ch*Rtha);
+                0, 1/(mAL*cAL*Rtha), -1/(mAL*cAL*Rtha) - (hAL*AAL)/(mAL*cAL)];
+            
+C1 = [0 0 0;
+      0 1 0;
+      0 0 1];
+
+C2 = [0 0 0;
+      0 1 0;
+      0 0 0];
+
+O1 = obsv(A,C1);
+O2 = obsv(A,C2);
+
+fprintf("rank(O1) = %d\n",rank(O1));
+fprintf("rank(O2) = %d\n",rank(O2));
