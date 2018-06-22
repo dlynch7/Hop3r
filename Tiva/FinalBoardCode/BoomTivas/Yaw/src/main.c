@@ -79,7 +79,7 @@
 #define ROLL 1
 #define PITCH 2
 #define YAW 3
-#define BOOM_ID ROLL // valid IDs are 1, 2, and 3
+#define BOOM_ID YAW // valid IDs are 1, 2, and 3
 
 #define NUM_SSI_DATA 3
 
