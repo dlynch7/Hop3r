@@ -63,6 +63,7 @@ line([0 t(end)],[Tw_max Tw_max],'Color','black')
 legend('winding temp','housing temp','plate temp','Location','Best')
 xlabel('time (s)')
 ylabel('Temperature (deg C)')
+title(['Simulated temperature profile for constant I = ',num2str(I),' A'])
 hold off 
 
 %% Simulate, for current needed to jump:
@@ -114,12 +115,16 @@ line([0 sim_t(end)],[Tw_max Tw_max],'Color','black')
 legend('winding temp','housing temp','plate temp','Location','Best')
 xlabel('time (s)')
 ylabel('Temperature (deg C)')
+title(['Simulated temperature profile for jumping, I = ',num2str(torqueJump*kv),' A'])
 hold off 
 
-%% Check observability
+%% Check stability and observability
 A = [-1/(mw*cw*Rtwh), 1/(mw*cw*Rtwh), 0; 
                 1/(mh*ch*Rtwh), -1/(mh*ch*Rtwh) - 1/(mh*ch*Rtha), 1/(mh*ch*Rtha);
                 0, 1/(mAL*cAL*Rtha), -1/(mAL*cAL*Rtha) - (hAL*AAL)/(mAL*cAL)];
+
+fprintf('Eigenvectors (V) and eigenvalues (D) of system matrix A:\n');
+[V,D] = eig(A)
             
 C1 = [0 0 0;
       0 1 0;
