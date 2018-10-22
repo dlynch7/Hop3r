@@ -1,7 +1,7 @@
 # Hopp3r
 Design and control of a 3-DOF planar hopping robot, used for NASA-sponsored locomotion research at Northwestern University's NxR lab, advised by Dr. Paul Umbanhowar and Dr. Kevin Lynch.
 
-![close_up_1](/media/photoshoot/close_up_1.jpg)
+![close_up_1](/media/photoshoot/close_up_1.jpg?s=200)
 
 ## Motivation
 Soft ground is a new frontier in robotic locomotion. It underles many uses for robots, such as extraterrestrial exploration, disaster response, search and rescue, military ground support, and earth science. Given the multitude of legged animals that traverse dirt, sand, and snow with relative ease, legged robots are a promising alternative to wheeled or treaded robots, which often get stuck in or skid on these types of yielding terrain.
