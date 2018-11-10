@@ -10,6 +10,8 @@ Soft ground is a new frontier in robotic locomotion. It underles many uses for r
 
 Hopp3r is a robotization of the spring-loaded inverted pendulum (SLIP) legged locomotion template, but with an additional degree of freedom to enable it to apply arbitrary planar wrenches. This way, it's capable of hopping as well as balancing, which enables us to learn not just how to achieve legged gaits on yielding terrain but also how to start and stop these gaits.
 
+Hopp3r is a quasi-direct-drive robot, so the actuators can be backdriven easily. This facilitates high-bandwidth virtual impedance motion control.
+
 ## Team members:
 * Alex Friedman
 * Zen Iwankiw
